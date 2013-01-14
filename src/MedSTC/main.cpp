@@ -164,17 +164,104 @@ SEXP medSTCTrain(SEXP documents_,
 			MedSTC model;
 			model.train("random", dir, c, &param);
 			delete c;
-			SEXP directory;
-            PROTECT(directory = allocVector(STRSXP, 1));
-            SET_STRING_ELT(directory, 0, mkChar(dir));
-         	UNPROTECT(1);
-			return directory;
+			SEXP retval, double_model_parameters,integer_model_parameters,dLogProbW,dMu,dEta,directory;
+			PROTECT(retval = allocVector(VECSXP, 6));
+			SET_VECTOR_ELT(retval, 0, double_model_parameters = allocVector(REALSXP, 9));
+			SET_VECTOR_ELT(retval, 1, integer_model_parameters = allocVector(INTSXP, 4));
+			SET_VECTOR_ELT(retval, 2, dLogProbW = allocMatrix(REALSXP, model.m_nNumTerms,model.m_nK));
+			SET_VECTOR_ELT(retval, 3, dMu = allocVector(REALSXP, model.m_nDim * model.m_nLabelNum));
+			SET_VECTOR_ELT(retval, 4, dEta = allocVector(REALSXP, model.m_nK * model.m_nLabelNum));
+			SET_VECTOR_ELT(retval, 5, directory = allocVector(STRSXP, 1));			
+			
+			REAL(double_model_parameters)[0]=model.m_dDeltaEll;
+			REAL(double_model_parameters)[1]=model.m_dLambda;
+			REAL(double_model_parameters)[2]=model.m_dRho;
+			REAL(double_model_parameters)[3]=model.m_dGamma;
+			REAL(double_model_parameters)[4]=model.m_dC;
+			REAL(double_model_parameters)[5]=model.m_dLogLoss;
+			REAL(double_model_parameters)[6]=model.m_dB;
+			REAL(double_model_parameters)[7]=model.m_dPoisOffset;
+			REAL(double_model_parameters)[8]=model.m_dsvm_primalobj;
+			
+			INTEGER(integer_model_parameters)[0]=model.m_nK;
+			INTEGER(integer_model_parameters)[1]=model.m_nLabelNum;
+			INTEGER(integer_model_parameters)[2]=model.m_nNumTerms;
+			INTEGER(integer_model_parameters)[3]=model.m_nDim;
+			int i,j;
+			for(i=0; i<model.m_nNumTerms;i++)
+				for (int j=0; j<model.m_nK; j++) 
+				REAL(dLogProbW)[i+model.m_nNumTerms*j]=model.m_dLogProbW[i][j];
+			for (i=0; i<model.m_nDim*model.m_nLabelNum;i++)
+				REAL(dMu)[i]=model.m_dMu[i];	
+			for (i=0; i<model.m_nK*model.m_nLabelNum;i++)
+				REAL(dEta)[i]=model.m_dEta[i];	
+			
+			SET_STRING_ELT(directory, 0, mkChar(dir));
+			UNPROTECT(1);
+			return retval;
 }
 }
 extern "C" {
-SEXP medSTCTest(SEXP documents_,SEXP labels_,SEXP dir_){
-  			char dir[512];
-  			sprintf(dir,"%s",CHAR(STRING_ELT(dir_,0)));
+SEXP medSTCTest(SEXP model,SEXP documents_,SEXP labels_, 
+			 SEXP ntopics_,
+			 SEXP class_num_,
+			 SEXP initial_c_,
+			 SEXP lambda_,
+			 SEXP rho_,
+			 SEXP nfolds_,
+			 SEXP delta_ell_,
+			 SEXP supervised_,
+			 SEXP primal_svm_,
+			 SEXP var_max_iter_,
+			 SEXP convergence_,
+			 SEXP em_max_iter_,
+			 SEXP em_convergence_,
+			 SEXP svm_alg_type_,
+			 SEXP res_file_,
+			 SEXP output_dir_){
+
+			int m_nK,m_nLabelNum,m_nNumTerms,m_nDim;
+			double **m_dLogProbW;
+			double m_dDeltaEll, m_dLambda,m_dRho, m_dGamma,m_dC,m_dLogLoss,m_dB,m_dPoisOffset,m_dsvm_primalobj;
+			double *m_dMu;
+			double *m_dEta;
+			char* m_directory;
+	
+			Params param;
+			CHECKLEN(ntopics_, Integer, 1);
+  			param.NTOPICS  = INTEGER(ntopics_)[0];
+  			CHECKLEN(class_num_, Integer, 1);
+  			param.NLABELS = INTEGER(class_num_)[0];
+  			CHECKLEN(initial_c_, Real, 1);
+  			param.INITIAL_C = REAL(initial_c_)[0];
+			CHECKLEN(lambda_, Real, 1);
+  			param.LAMBDA = REAL(lambda_)[0];
+  			CHECKLEN(rho_, Real, 1);
+  			param.RHO= REAL(rho_)[0];
+  			CHECKLEN(nfolds_, Integer, 1);
+  			param.NFOLDS = INTEGER(nfolds_)[0];
+  			CHECKLEN(delta_ell_, Real, 1);
+  			param.DELTA_ELL = REAL(delta_ell_)[0];
+  			CHECKLEN(supervised_, Logical, 1);
+  			param.SUPERVISED= LOGICAL(supervised_)[0];
+  			CHECKLEN(primal_svm_, Logical, 1);
+  			param.PRIMALSVM = LOGICAL(primal_svm_)[0];
+  			CHECKLEN(var_max_iter_, Integer, 1);
+  			param.VAR_MAX_ITER = INTEGER(var_max_iter_)[0];
+  			CHECKLEN(convergence_, Real, 1);
+  			param.VAR_CONVERGED = REAL(convergence_)[0];
+  			CHECKLEN(em_max_iter_, Integer, 1);
+  			param.EM_MAX_ITER = INTEGER(em_max_iter_)[0];
+  			CHECKLEN(em_convergence_, Real, 1);
+  			param.EM_CONVERGED = REAL(em_convergence_)[0];
+  			CHECKLEN(svm_alg_type_, Integer, 1);
+  			param.SVM_ALGTYPE = INTEGER(svm_alg_type_)[0];
+  			
+  			char res_file[512];
+  			sprintf(param.res_filename,"%s",CHAR(STRING_ELT(res_file_,0)));
+  			char output_dir[512];
+  			sprintf(output_dir,"%s",CHAR(STRING_ELT(output_dir_,0)));
+			
   			CHECK(documents_, NewList);
 			int nd = length(documents_);
 			int labels[nd];
@@ -187,17 +274,55 @@ SEXP medSTCTest(SEXP documents_,SEXP labels_,SEXP dir_){
     				labels[i]=INTEGER(labels_)[i];
     				}
     		}
-    		Params param;
-    		char paramFile[512];
-			sprintf(paramFile, "%s/param.dat", dir);
-			if (file_exist(paramFile)) param.read_settings(paramFile);
-			else error("param.dat file is not found in %s",dir);	
- 			Corpus *c = new Corpus();
+    		
+    		Corpus *c = new Corpus();
 			read_data_from_R(c,documents_,nd,labels);			
-			MedSTC evlModel;
-			double dAcc = evlModel.sparse_coding(dir, c, &param);
-			Rprintf("Accuracy: %.3f\n", dAcc);
-			delete c;	
+			SEXP double_model_parameters = VECTOR_ELT(model,0);
+				m_dDeltaEll = REAL(double_model_parameters)[0];
+				m_dLambda = REAL(double_model_parameters)[1];
+				m_dRho = REAL(double_model_parameters)[2];
+				m_dGamma = REAL(double_model_parameters)[3];			
+				m_dC = REAL(double_model_parameters)[4];
+				m_dLogLoss = REAL(double_model_parameters)[5];
+				m_dB = REAL(double_model_parameters)[6];
+				m_dPoisOffset = REAL(double_model_parameters)[7];
+				m_dsvm_primalobj = REAL(double_model_parameters)[8];
+			SEXP integer_model_parameters = VECTOR_ELT(model,1);
+				m_nK = INTEGER(integer_model_parameters)[0];
+				m_nLabelNum = INTEGER(integer_model_parameters)[1];
+				m_nNumTerms = INTEGER(integer_model_parameters)[2];
+				m_nDim = INTEGER(integer_model_parameters)[3];
+			
+			m_dLogProbW = (double**)malloc(sizeof(double*)*m_nNumTerms);
+			m_dEta = (double*)malloc(sizeof(double) * m_nK * m_nLabelNum);
+			m_dMu = (double*)malloc(sizeof(double) * m_nDim * m_nLabelNum);
+			SEXP dLogProbW = VECTOR_ELT(model,2);
+				for (int i=0; i<m_nNumTerms; i++) {
+					m_dLogProbW[i] = (double*)malloc(sizeof(double)*m_nK);
+					for (int j=0; j<m_nK; j++) 
+						m_dLogProbW[i][j] = REAL(dLogProbW)[i+m_nNumTerms*j];
+				}
+			SEXP dMu = VECTOR_ELT(model,3);
+				for (int i=0; i<m_nDim; i++)
+					for (int j=0; j<m_nLabelNum; j++)
+						m_dMu[i*m_nLabelNum + j] = REAL(dMu)[i*m_nLabelNum + j];
+
+			SEXP dEta = VECTOR_ELT(model,4);
+			for ( int i=0; i<m_nK; i++ ) {	
+					for (int j=0; j<m_nLabelNum; j++) 
+						m_dEta[i*m_nLabelNum + j] = REAL(dEta)[i*m_nLabelNum + j];
+				}
+				
+			SEXP directory = VECTOR_ELT(model,5);
+			sprintf(m_directory,"%s",CHAR(STRING_ELT(directory,0)));
+			
+			
+			MedSTC evlModel = MedSTC(m_nK,m_nLabelNum,m_nNumTerms,m_nDim,m_dDeltaEll,m_dLambda,m_dRho,m_dGamma,m_dC,
+			m_dLogLoss,m_dB,m_dPoisOffset,m_dsvm_primalobj, 
+			m_dLogProbW, m_dMu,m_dEta, m_directory);
+			
+	
+			evlModel.predictTest(c, &param);
 			
 			SEXP retval;
   			PROTECT(retval = allocMatrix(REALSXP, nd, param.NLABELS));
@@ -205,9 +330,19 @@ SEXP medSTCTest(SEXP documents_,SEXP labels_,SEXP dir_){
   				for (int j=0; j<param.NLABELS; j++)
   				REAL(retval)[i+c->num_docs*j] =  c->docs[i].scores[j];
          	}
+         	delete c;
          	UNPROTECT(1);
-			return retval;	
+			return retval;	/*
+			SEXP retval;
+			PROTECT(retval = allocVector(STRSXP, 1));
+			SET_STRING_ELT(retval, 0, mkChar("hello2"));
+			UNPROTECT(1);
+			return retval;*/
   	
 }
 }
 
+
+
+    
+	

@@ -45,6 +45,54 @@ MedSTC::MedSTC(void)
 	initEta_ = NULL;
 	m_pLBFGS = NULL;
 }
+MedSTC::MedSTC(int nK,int nLabelNum,int nNumTerms,int nDim,
+			double dDeltaEll,double dLambda,double dRho,double dGamma,double dC,
+			double dLogLoss,double dB,double dPoisOffset,double dsvm_primalobj, 
+			double **dLogProbW, double *dMu,double *dEta, char* directory){
+				m_nK=nK;
+				m_nLabelNum=nLabelNum;
+				m_nNumTerms=nNumTerms;
+				m_dDeltaEll=dDeltaEll;
+				m_dLambda=dLambda;
+				m_dRho=dRho;
+				m_dGamma=dGamma;
+				m_dC=dC;
+				m_dLogLoss=dLogLoss;
+				m_dB = dB;
+				m_dPoisOffset=dPoisOffset;
+				m_nDim=nDim;
+				m_dsvm_primalobj=dsvm_primalobj;
+				m_dLogProbW = (double**)malloc(sizeof(double*)*nNumTerms);
+				m_dEta = (double*)malloc(sizeof(double) * nK * nLabelNum);
+				m_dMu = (double*)malloc(sizeof(double) * nDim * nLabelNum);
+				
+				
+				for (int i=0; i<nNumTerms; i++) {
+					m_dLogProbW[i] = (double*)malloc(sizeof(double)*nK);
+					for (int j=0; j<nK; j++) 
+						m_dLogProbW[i][j] = dLogProbW[i][j];
+				}
+				for ( int i=0; i<nK; i++ ) {	
+					for (int j=0; j<nLabelNum; j++) 
+						m_dEta[i*nLabelNum + j] = dEta[i*nLabelNum + j];
+				}
+				for (int i=0; i<nDim; i++)
+					for (int j=0; j<nLabelNum; j++)
+						m_dMu[i*nLabelNum + j] = dMu[i*nLabelNum + j];
+
+	         m_directory = new char[512];
+	         strcpy(m_directory,directory);
+	         printf("%s\n",m_directory);
+			sold_ = NULL;
+	mu_   = NULL;
+	x_    = NULL;
+	g_    = NULL;
+	diag_ = NULL;
+	initEta_ = NULL;
+	m_pLBFGS = NULL;
+
+			
+			}
 
 MedSTC::~MedSTC(void)
 {
@@ -154,9 +202,6 @@ double MedSTC::save_prediction(char *filename, Corpus *pC)
 	return dAcc;
 }
 
-
-
-
 // allocate memory for the fast-computing parameters.
 void MedSTC::init_param(Corpus *pC)
 {
@@ -238,8 +283,7 @@ int MedSTC::train(char* start, char* directory, Corpus* pC, Params *param)
 	strcpy(m_directory, directory);
 
 	char filename[100];
-	//sprintf(filename, "%s/000",directory);
-	//save_model(filename, -1);
+	
 
 	// run expectation maximization
 	sprintf(filename, "%s/lhood.dat", directory);
@@ -1103,13 +1147,9 @@ double MedSTC::sparse_coding(char* model_dir, Corpus* pC, Params *param)
 	char filename[100];
 	sprintf(filename, "%s/evl-slda-obj.dat", model_dir);
 	FILE* fileptr = fopen(filename, "w");
-	//sprintf(filename, "%s/evl-word-code.dat", model_dir);
-	//FILE* wrdfptr = fopen(filename, "w");
-	double scores[m_nLabelNum];
 	
-	char scoreFilename[100];
-	sprintf(scoreFilename,"%s/scores.csv",model_dir);
-	FILE *scoresfileptr = fopen(scoreFilename, "w");
+	
+	
 	double dEntropy = 0, dobj = 0, dNonZeroWrdCode = 0, dNonZeroDocCode = 0;
 	int nTotalWrd = 0;
 	long runtime_start = get_runtime();
@@ -1130,10 +1170,7 @@ double MedSTC::sparse_coding(char* model_dir, Corpus* pC, Params *param)
 		
 		doc->scores = (double*) malloc(sizeof(double)*m_nLabelNum);;
 		predict_scores(doc->scores,theta[d]);
-		for (int si=0; si<m_nLabelNum-1;si++)
-			fprintf(scoresfileptr, "%f,",doc->scores[si]);
-		fprintf(scoresfileptr, "%f,%d\n",doc->scores[m_nLabelNum-1],doc->predlabel);
-
+		
 		doc->lhood = dobj;
 		fprintf(fileptr, "%5.5f\n", dobj);
 
@@ -1164,7 +1201,7 @@ double MedSTC::sparse_coding(char* model_dir, Corpus* pC, Params *param)
 		//	}
 		//}
 	}
-	fclose(scoresfileptr);
+	
 	fclose( fileptr );
 	//fclose( wrdfptr );
 	long runtime_end = get_runtime();
@@ -1231,6 +1268,90 @@ double MedSTC::sparse_coding(char* model_dir, Corpus* pC, Params *param)
 	return dAcc;
 }
 
+void MedSTC::predictTest(Corpus* pC, Params *param)
+{
+	init_param( pC );
+	Document* doc = NULL;
+	if ( pC->num_terms > m_nNumTerms ) {
+		for ( int i=0; i<pC->num_docs; i ++ ) {
+			doc = &(pC->docs[i]);
+			for ( int k=0; k<doc->length; k++ )
+				if ( doc->words[k] >= m_nNumTerms )
+					doc->words[k] = m_nNumTerms - 1;
+		}
+	}
+	int max_length = pC->max_corpus_length();
+	double **phi = (double**)malloc(sizeof(double*)*max_length);
+	for (int n=0; n<max_length; n++) {
+		phi[n] = (double*)malloc(sizeof(double) * m_nK);
+	}
+	double **theta = (double**)malloc(sizeof(double*)*(pC->num_docs));
+	for (int d=0; d<pC->num_docs; d++) {
+		theta[d] = (double*)malloc(sizeof(double)*m_nK);
+	}
+	double **avgTheta = (double**)malloc(sizeof(double*)*m_nLabelNum);
+	for ( int k=0; k<m_nLabelNum; k++ ) {
+		avgTheta[k] = (double*)malloc(sizeof(double)*m_nK);
+		memset(avgTheta[k], 0, sizeof(double)*m_nK);
+	}
+	vector<vector<double> > avgWrdCode(m_nNumTerms);
+	vector<int> wrdCount(m_nNumTerms, 0);
+	for ( int i=0; i<m_nNumTerms; i++ ) {
+		avgWrdCode[i].resize( m_nK, 0 );
+	}
+	vector<int> perClassDataNum(m_nLabelNum, 0);
+	double dEntropy = 0, dobj = 0, dNonZeroWrdCode = 0, dNonZeroDocCode = 0;
+	int nTotalWrd = 0;
+	long runtime_start = get_runtime();
+	for (int d=0; d<pC->num_docs; d++) {
+
+		doc = &(pC->docs[d]);
+		// initialize phi.
+		for (int n=0; n<doc->length; n++) {
+			double *phiPtr = phi[n];
+			for ( int k=0; k<m_nK; k++ ) {
+				phiPtr[k] = 1.0 / m_nK;
+			}
+		}
+		dobj = sparse_coding( doc, d, param, theta[d], phi );
+
+		doc->predlabel = predict(theta[d]);
+		
+		doc->scores = (double*) malloc(sizeof(double)*m_nLabelNum);;
+		predict_scores(doc->scores,theta[d]);
+		doc->lhood = dobj;
+		int gndLabel = doc->gndlabel;
+		perClassDataNum[gndLabel] ++;
+		for ( int k=0; k<m_nK; k++ ) {
+			for ( int n=0; n<doc->length; n++ ) {
+				if ( phi[n][k] > 0/*1e-10*/ ) dNonZeroWrdCode ++;
+			}
+			
+			avgTheta[gndLabel][k] += theta[d][k];
+			if ( theta[d][k] > 0 ) dNonZeroDocCode ++;
+		}
+		nTotalWrd += doc->length;
+	
+
+		dEntropy += safe_entropy( theta[d], m_nK );
+
+	}
+	
+	for (int i=0; i<pC->num_docs; i++ ) {
+		free( theta[i] );
+	}
+	for ( int n=0; n<max_length; n++ ) {
+		free( phi[n] );
+	}
+	for ( int k=0; k<m_nLabelNum; k++ ) {
+		free( avgTheta[k] );
+	}
+	free( theta );
+	free( phi );
+	free( avgTheta );
+}
+
+
 void MedSTC::learn_svm(char *model_dir, const double &dC, const double &dEll)
 {
 	char model_root[512];
@@ -1257,7 +1378,7 @@ void MedSTC::learn_svm(char *model_dir, const double &dC, const double &dEll)
 	double dAcc = 0;
 	get_test_filename( filename, model_dir, param );
 	readLowDimData( filename, nDataNum );
-	double scores[m_nLabelNum];
+
 	for ( int d=0; d<nDataNum; d++ ) {
 		int predLabel = predict( theta_[d] );
 		if ( label_[d] == predLabel ) dAcc ++;

@@ -45,6 +45,12 @@ class MedSTC
 {
 public:
 	MedSTC(void);
+	MedSTC(int nK,int nLabelNum,int nNumTerms,int nDim,
+			double dDeltaEll,double dLambda,double dRho,double dGamma,double dC,
+			double dLogLoss,double dB,double dPoisOffset,double dsvm_primalobj, 
+			double **dLogProbW, double *dMu,double *dEta,char* directory);
+	
+	
 public:
 	~MedSTC(void);
 
@@ -70,7 +76,7 @@ public:
 
 	int predict(double *theta);
 	void predict_scores(double* scores,double *theta);
-	
+	void predictTest(Corpus* pC, Params *param);
 	void loss_aug_predict(Document *doc, double *zbar_mean);
 	double loss(const int &y, const int &gnd);
 
@@ -103,7 +109,7 @@ public:
 	double m_dGamma;
 	double m_dC;
 	double m_dLogLoss;
-private:
+//private:
 	double *m_dMu;
 	double *m_dEta;
 	double m_dB;
