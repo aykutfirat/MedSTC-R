@@ -3780,7 +3780,7 @@ CFLOAT *kernel_cache_clean_and_malloc(KERNEL_CACHE *kernel_cache,
 	}
 	kernel_cache->invindex[result]=docnum;
 	kernel_cache->lru[kernel_cache->index[docnum]]=kernel_cache->time; /* lru */
-	return((CFLOAT *)((long)kernel_cache->buffer
+	return((CFLOAT *)(kernel_cache->buffer
 		+(kernel_cache->activenum*sizeof(CFLOAT)*
 		kernel_cache->index[docnum])));
 }

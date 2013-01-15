@@ -21,13 +21,12 @@
 #include <string>
 #include <stdlib.h>
 #include <stdio.h>
-using namespace std;
+//using namespace std;
 
 Params::Params(void)
 {
 	train_filename = new char[512];
 	test_filename = new char[512];
-	res_filename = new char[512];
 	SUPERVISED = 0;
 	PRIMALSVM = 1;
 	DELTA_ELL = 360;
@@ -37,13 +36,12 @@ Params::~Params(void)
 {
 	delete[] train_filename;
 	delete[] test_filename;
-	delete[] res_filename;
 }
 
 void Params::read_settings(char* filename)
 {
 	FILE* fileptr;
-	char alpha_action[100];
+	
 	fileptr = fopen(filename, "r");
 	fscanf(fileptr, "supervised %d\n", &SUPERVISED);
 	fscanf(fileptr, "primal svm %d\n", &PRIMALSVM);
@@ -61,7 +59,6 @@ void Params::read_settings(char* filename)
 	fscanf(fileptr, "train_file: %s\n", train_filename);
 	fscanf(fileptr, "test_file: %s\n", test_filename);
 	fscanf(fileptr, "class_num: %d\n", &NLABELS);
-	fscanf(fileptr, "res_file: %s\n", res_filename);
 
 	fclose(fileptr);
 }
@@ -69,7 +66,7 @@ void Params::read_settings(char* filename)
 void Params::save_settings(char* filename)
 {
 	FILE* fileptr;
-	char alpha_action[100];
+	
 	fileptr = fopen(filename, "w");
 	fprintf(fileptr, "supervised %d\n", SUPERVISED);
 	fprintf(fileptr, "primal svm %d\n", PRIMALSVM);
@@ -87,7 +84,6 @@ void Params::save_settings(char* filename)
 	fprintf(fileptr, "train_file: %s\n", train_filename);
 	fprintf(fileptr, "test_file: %s\n", test_filename);
 	fprintf(fileptr, "class_num: %d\n", NLABELS);
-	fprintf(fileptr, "res_file: %s\n", res_filename);
 
 	fclose(fileptr);
 }

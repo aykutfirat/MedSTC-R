@@ -3,7 +3,7 @@
 #include <sstream>
 #include <iostream>
 #include <string>
-using namespace std;
+//using namespace std;
 
 ExceptionWithIflag::ExceptionWithIflag()
 {
@@ -19,21 +19,26 @@ ExceptionWithIflag::~ExceptionWithIflag() throw() {
 }
 wstring ExceptionWithIflag::toString()
 {
-
-	wchar_t  szCause[255];
-	wstring strFormatted;
-
+	wstring strFormatted( L"Error" );
+	/*
 
 	strFormatted += content;
 
 	wchar_t buff[256];
+	#ifdef WINDOWS_VERSION
+	_swprintf(buff, L"(iflag == %d)", iflag);
+	#else
 	swprintf(buff,256, L"(iflag == %d)", iflag);
+	#endif
 	wstring str(buff);
 
 	strFormatted += str;
-
+	*/
 	return strFormatted;
+	
 }
+
+
 
 CMcsrch::CMcsrch(void)
 {
@@ -246,7 +251,7 @@ void CMcsrch::mcsrch ( int n , double x[] , double f , double g[] , double s[] ,
 		dgy[0] = dginit;
 	}
 
-	int nIter = 0;
+	
 	while ( true )
 	{
 		if ( info[0] != -1 )

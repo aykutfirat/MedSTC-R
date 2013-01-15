@@ -1,12 +1,13 @@
-Package: MedSTC
+Package: medSTC
 Type: Package
-Title: Test. 
+Title: A max-margin supervised Sparse Topical Coding Model 
 Version: 1.0.0
-Date: 2012-05-22
-Author: A F
-Maintainer: A F <A@F.com>
-Description: Test
-License: LGPL
+Date: 2013-01-15
+Author: Jun Zhu <junzhu@cs.cmu.edu>, Aykut FIRAT <aykut@crimsonhexagon.com>
+Maintainer: Aykut FIRAT <aykut@crimsonhexagon.com>
+Description: This is a C++ implementation of Sparse Topical Coding (STC), a model 
+			 of discrete data which is fully described in Zhu et al. (2011)
+			 (http://www.cs.cmu.edu/~junzhu/stc/stc.pdf).
+License: GPL
 LazyLoad: yes
-Suggests: Matrix, reshape2, ggplot2 (>= 0.9.1), penalized
 

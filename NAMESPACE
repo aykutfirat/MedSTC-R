@@ -1,2 +1,2 @@
 exportPattern("^[^\\.]")
-useDynLib(MedSTC)
+useDynLib(medSTC)

@@ -50,5 +50,4 @@ public:
 
 	char *train_filename;   // the file names of training & testing data sets
 	char *test_filename;
-	char *res_filename;
 };

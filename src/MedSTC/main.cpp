@@ -27,9 +27,10 @@
 #ifdef WINDOWS_VERSION
 	#include <direct.h>
 #endif
+#include <dirent.h>
 #include <R.h>
 #include <Rdefines.h>
-using namespace std;
+//using namespace std;
 
 #define CHECK(VAL, TYPE) if (!is##TYPE(VAL)) { \
     error(#VAL " must be a(n) " #TYPE "."); \
@@ -44,6 +45,7 @@ using namespace std;
   }
 #define NUMROWS(MAT) (INTEGER(GET_DIM(MAT))[0])
 #define NUMCOLS(MAT) (INTEGER(GET_DIM(MAT))[1])
+
 int file_exist (char *filename)
 {
   struct stat   buffer;   
@@ -89,27 +91,26 @@ void read_data_from_R(Corpus* c, SEXP documents,int nd, int labels[])
 }
 #ifdef WINDOWS_VERSION
 char* createDir(char* prefix){
-				char *templat = "tmpXXXXXX";
-				char * dir;
-				char name[9]; 
+
+				char name[] ="tmpXXXXXX"; 
 				int rez;
-				strcpy_s(name, sizeof(name), templat);
+				char* dir= new char[512];
 				rez = _mktemp_s(name, sizeof(name));
 				if (rez == 0) {
        				sprintf(dir, "%s_%s", prefix,name);
-       				if( _mkdir( dir ) != 0 ) 
+       				if( _mkdir(dir) != 0 ) 
      					error("Problem creating directory %s \n",dir);
 				}
 				else {
         			error("Temporary model directory name %s could not be created.", dir);
 				}
-				return dir;
+				return dir;		
 }
 #else
 char* createDir(char* prefix){          
 				char name[] ="tmpXXXXXX"; 
 				char * rez;
-				char dir[512];
+				char* dir= new char[512];
 				rez = mktemp(name);
 				if (rez != NULL) {
        				sprintf(dir, "%s_%s", prefix,rez);
@@ -119,10 +120,30 @@ char* createDir(char* prefix){
 				else {
         			error("Temporary model directory name %s could not be created.", dir);
 				}
-				return dir;
-				
+				return dir;		
 }
+
 #endif
+
+void removeDirectory(char * directory){
+	DIR *dir;
+	struct dirent *ent;
+    dir = opendir (directory);
+	if (dir != NULL) {
+  		while ((ent = readdir (dir)) != NULL) {
+  			char name[512];
+  			sprintf(name, "%s/%s", directory, ent->d_name);
+    		remove(name);
+  		}
+   		closedir (dir);
+    #ifdef WINDOWS_VERSION
+         		_rmdir(directory);
+    #else
+         	 	rmdir(directory);
+    #endif
+}
+}
+
 
 extern "C" {
 SEXP medSTCTrain(SEXP documents_,
@@ -141,13 +162,12 @@ SEXP medSTCTrain(SEXP documents_,
 			 SEXP em_max_iter_,
 			 SEXP em_convergence_,
 			 SEXP svm_alg_type_,
-			 SEXP res_file_,
 			 SEXP output_dir_){
   			
   			GetRNGstate();
   			CHECK(documents_, NewList);
 			int nd = length(documents_);
-			int labels[nd];
+			int* labels = new int[nd];
 			if (!isNull(labels_)) {
     			if (length(labels_) != nd) {
       				error("class labels must have same length as documents.");
@@ -189,11 +209,9 @@ SEXP medSTCTrain(SEXP documents_,
   			
   			char output_dir[512];
   			sprintf(output_dir,"%s",CHAR(STRING_ELT(output_dir_,0)));
-  			char res_file[512];
-  			sprintf(param.res_filename,"%s/%s",output_dir,CHAR(STRING_ELT(res_file_,0)));
  			Corpus *c = new Corpus();
 		    read_data_from_R(c,documents_,nd,labels);	
-			char dir[512];
+			char *  dir = new char[512];
 			sprintf(dir, "%s/s%d_c%d_f%d_s%d", output_dir, param.NTOPICS, (int) param.INITIAL_C,param.NFOLDS, param.SUPERVISED);
 			char* dirTemp;
 			dirTemp = createDir(dir);		
@@ -226,18 +244,14 @@ SEXP medSTCTrain(SEXP documents_,
 			INTEGER(integer_model_parameters)[3]=model.m_nDim;
 			int i,j;
 			for(i=0; i<model.m_nNumTerms;i++)
-				for (int j=0; j<model.m_nK; j++) 
+				for (j=0; j<model.m_nK; j++) 
 				REAL(dLogProbW)[i+model.m_nNumTerms*j]=model.m_dLogProbW[i][j];
 			for (i=0; i<model.m_nDim*model.m_nLabelNum;i++)
 				REAL(dMu)[i]=model.m_dMu[i];	
 			for (i=0; i<model.m_nK*model.m_nLabelNum;i++)
 				REAL(dEta)[i]=model.m_dEta[i];	
 			SET_STRING_ELT(directory, 0, mkChar(dir));
-			#ifdef WINDOWS_VERSION
-         		_rmdir(dir);
-         	#else
-         		rmdir(dir);
-         	#endif
+			removeDirectory(dir);
 			UNPROTECT(1);
 			return retval;
 			
@@ -259,7 +273,6 @@ SEXP medSTCTest(SEXP model,SEXP documents_,SEXP labels_,
 			 SEXP em_max_iter_,
 			 SEXP em_convergence_,
 			 SEXP svm_alg_type_,
-			 SEXP res_file_,
 			 SEXP output_dir_){
 
 			int m_nK,m_nLabelNum,m_nNumTerms,m_nDim;
@@ -300,11 +313,9 @@ SEXP medSTCTest(SEXP model,SEXP documents_,SEXP labels_,
   			
   			char output_dir[512];
   			sprintf(output_dir,"%s",CHAR(STRING_ELT(output_dir_,0)));
-  			char res_file[512];
-  			sprintf(param.res_filename,"%s/%s",output_dir,CHAR(STRING_ELT(res_file_,0)));
   			CHECK(documents_, NewList);
 			int nd = length(documents_);
-			int labels[nd];
+			int* labels = new int[nd];
 			if (!isNull(labels_)) {
     			if (length(labels_) != nd) {
       				error("class labels must have same length as documents.");
@@ -360,7 +371,7 @@ SEXP medSTCTest(SEXP model,SEXP documents_,SEXP labels_,
 						m_dEta[i*m_nLabelNum + j] = REAL(dEta)[i*m_nLabelNum + j];
 				}
 				
-			SEXP directory = VECTOR_ELT(model,5);
+			
 			
 			MedSTC evlModel = MedSTC(m_nK,m_nLabelNum,m_nNumTerms,m_nDim,m_dDeltaEll,m_dLambda,m_dRho,m_dGamma,m_dC,
 			m_dLogLoss,m_dB,m_dPoisOffset,m_dsvm_primalobj, 
@@ -376,11 +387,7 @@ SEXP medSTCTest(SEXP model,SEXP documents_,SEXP labels_,
   				REAL(retval)[i+c->num_docs*j] =  c->docs[i].scores[j];
          	}
          	delete c;
-         	#ifdef WINDOWS_VERSION
-         		_rmdir(dir);
-         	#else
-         		rmdir(dir);
-         	#endif
+         	removeDirectory(dir);
          	UNPROTECT(1);
 			return retval;	
   	

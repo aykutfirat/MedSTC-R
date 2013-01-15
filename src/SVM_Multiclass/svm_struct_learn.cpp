@@ -24,7 +24,7 @@
 #include "svm_struct_api.h"
 #include <assert.h>
 #include <vector>
-using namespace std;
+//using namespace std;
 
 #define MAX(x,y)      ((x) < (y) ? (y) : (x))
 #define MIN(x,y)      ((x) > (y) ? (y) : (x))
@@ -290,8 +290,7 @@ void svm_learn_struct(SAMPLE sample, STRUCT_LEARN_PARM *sparm,
 							cset.lhs[cset.m-1]->orgDocNum = ex[i].x.doc->docnum * ybar.num_classes 
 								+ ybar.classlabel - 1;
 
-							int tmp = cset.lhs[cset.m-1]->orgDocNum;
-							int tmp2 = 0;
+							
 						} else {
 							//printf("+"); fflush(stdout); 
 							if(opti[i] != opti_round) {

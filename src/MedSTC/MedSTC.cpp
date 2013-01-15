@@ -23,7 +23,7 @@
 #include "../SVMLight/svm_common.h"
 #include "params.h"
 #include "LBFGSCPP.h"
-using namespace std;
+//using namespace std;
 
 MedSTC::MedSTC(void)
 {
@@ -255,7 +255,6 @@ int MedSTC::train(char* start, char* directory, Corpus* pC, Params *param)
 
 	// allocate variational parameters
 	double ***phi = (double***)malloc(sizeof(double**) * pC->num_docs);
-	int max_length = pC->max_corpus_length();
 	for ( int d=0; d<pC->num_docs; d++ ) {
 		phi[d] = (double**)malloc(sizeof(double*)*pC->docs[d].length);
 		for (int n=0; n<pC->docs[d].length; n++) {
@@ -395,7 +394,7 @@ bool MedSTC::dict_learn(Corpus *pC, double **theta, double***s, Params *param, b
 {
 	// run projected gradient descent.
 	int opt_size = m_nK * m_nNumTerms;
-	int opt_iter = 0, ndim = opt_size + 10;
+	int opt_iter = 0;
 	double pref = 1.0;
 	double f=0, eps = 1.0e-5, xtol = 1.0e-16;
 	int m = 5, iprint[2], iflag[1];
@@ -404,8 +403,6 @@ bool MedSTC::dict_learn(Corpus *pC, double **theta, double***s, Params *param, b
 	iprint[0] = -1; iprint[1] = 0;
 	iflag[0]=0;
 
-	// initialize
-	FILE *fileptr = NULL;
 #if _DEBUG
 	fileptr = fopen("grad_beta.txt", "a");
 #endif
@@ -526,7 +523,7 @@ void MedSTC::project_beta2( double *beta, const int &nTerms,
 		mu_[i] = beta[i] - epsilon;
 		U[i] = i + 1;
 	}
-	double dZVal = dZ - epsilon * nTerms; // make sure dZVal > 0
+	
 
 	/* project to a simplex. */
 	double s = 0;
@@ -764,7 +761,6 @@ void MedSTC::svmStructSolver(char *dataFileName, Params *param, double *res)
 
 	if ( param->SVM_ALGTYPE == 0 ) {
 		for ( int k=1; k<structmodel.svm_model->sv_num; k++ ) {
-			int n = structmodel.svm_model->supvec[k]->docnum;
 			int docnum = structmodel.svm_model->supvec[k]->orgDocNum;
 			m_dMu[docnum] = structmodel.svm_model->alpha[k];
 		}
@@ -1014,7 +1010,7 @@ double MedSTC::sparse_coding(Document *doc, const int &docIx,
 	double mu, eta, beta, aVal, bVal, cVal, discVal, sqrtDiscVal;
 	double s1, s2;
 
-	int it = 0, iter = 0;
+	int it = 0;
 	while (((dconverged < 0) || (dconverged > param->VAR_CONVERGED) 
 		|| (it <= 2)) && (it <= param->VAR_MAX_ITER))
 	{
@@ -1151,7 +1147,7 @@ double MedSTC::sparse_coding(char* model_dir, Corpus* pC, Params *param)
 	
 	double dEntropy = 0, dobj = 0, dNonZeroWrdCode = 0, dNonZeroDocCode = 0;
 	int nTotalWrd = 0;
-	long runtime_start = get_runtime();
+	
 	for (int d=0; d<pC->num_docs; d++) {
 
 		doc = &(pC->docs[d]);
@@ -1202,8 +1198,8 @@ double MedSTC::sparse_coding(char* model_dir, Corpus* pC, Params *param)
 	}
 	
 	fclose( fileptr );
-	//fclose( wrdfptr );
-	long runtime_end = get_runtime();
+	
+	
 	
 
 	/* save theta & average theta. */
@@ -1240,15 +1236,6 @@ double MedSTC::sparse_coding(char* model_dir, Corpus* pC, Params *param)
 	/* save the prediction performance. */
 	sprintf(filename, "%s/evl-performance.dat", model_dir);
 	double dAcc = save_prediction(filename, pC);
-
-	/* write to overall result file. */
-	fileptr = fopen(param->res_filename, "a");
-	fprintf(fileptr, "setup (K: %d; C: %.3f; fold: %d; ell: %.2f; lambda: %.2f; rho: %.4f; svm_alg: %d; maxIt: %d): accuracy %.3f; avgNonZeroWrdCode: %.3f; avgNonZeroDocCode: %.3f; avgDoc-Entropy: %.3f; TestTime: %.3f\n", 
-		m_nK, m_dC, param->NFOLDS, param->DELTA_ELL, m_dLambda, 
-		m_dRho, param->SVM_ALGTYPE, param->EM_MAX_ITER, dAcc, 
-		dNonZeroWrdCode/nTotalWrd, dNonZeroDocCode/pC->num_docs, 
-		dEntropy/pC->num_docs, ((float)runtime_end-(float)runtime_start)/100.0);
-	fclose(fileptr);
 
 	// free memory
 	for (int i=0; i<pC->num_docs; i++ ) {
@@ -1301,7 +1288,7 @@ void MedSTC::predictTest(Corpus* pC, Params *param)
 	vector<int> perClassDataNum(m_nLabelNum, 0);
 	double dEntropy = 0, dobj = 0, dNonZeroWrdCode = 0, dNonZeroDocCode = 0;
 	int nTotalWrd = 0;
-	long runtime_start = get_runtime();
+	
 	for (int d=0; d<pC->num_docs; d++) {
 
 		doc = &(pC->docs[d]);
@@ -1387,7 +1374,7 @@ void MedSTC::learn_svm(char *model_dir, const double &dC, const double &dEll)
 	
 	FILE *fileptr = fopen("overall-res.txt", "a");
 	fprintf(fileptr, "setup (K: %d; C: %.3f; fold: %d; ell: %.2f; lambda: %.2f; rho: %.4f; svm_alg: %d; maxIt: %d): accuracy %.3f; avgNonZeroWrdCode: %.5f\n", 
-		m_nK, m_dC, 0, dEll, m_dLambda, m_dRho, param->SVM_ALGTYPE, 0, dAcc, 0);
+		m_nK, m_dC, 0, dEll, m_dLambda, m_dRho, param->SVM_ALGTYPE, 0, dAcc, 0.0);
 	fclose(fileptr);
 
 	save_model( model_root, -1 );
@@ -1452,7 +1439,6 @@ int MedSTC::predict(double *theta)
 void MedSTC::predict_scores(double * scores, double *theta)
 {
 	
-	double dMaxScore = 0;
 	for ( int y=0; y<m_nLabelNum; y++ )
 	{
 		double dScore = 0;

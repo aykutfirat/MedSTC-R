@@ -66,7 +66,7 @@ SAMPLE      read_struct_examples(char *file, STRUCT_LEARN_PARM *sparm)
 			num_classes = target[i]+0.1;
 	for( i=0; i<n; i++ )     /* make sure all class labels are positive */
 		if(target[i]<1) {
-			printf("\nERROR: The class label '%lf' of example number %ld is not greater than '1'!\n",target[i],i+1);
+			printf("\nERROR: The class label '%f' of example number %ld is not greater than '1'!\n",target[i],i+1);
 			exit(1);
 		} 
 
