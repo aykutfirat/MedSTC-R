@@ -80,16 +80,15 @@ MedSTC::MedSTC(int nK,int nLabelNum,int nNumTerms,int nDim,
 					for (int j=0; j<nLabelNum; j++)
 						m_dMu[i*nLabelNum + j] = dMu[i*nLabelNum + j];
 
-	         m_directory = new char[512];
-	         strcpy(m_directory,directory);
-	         printf("%s\n",m_directory);
-			sold_ = NULL;
-	mu_   = NULL;
-	x_    = NULL;
-	g_    = NULL;
-	diag_ = NULL;
-	initEta_ = NULL;
-	m_pLBFGS = NULL;
+				 m_directory = new char[512];
+				 strcpy(m_directory,directory);
+				 sold_ = NULL;
+				 mu_   = NULL;
+				 x_    = NULL;
+				 g_    = NULL;
+				 diag_ = NULL;
+				 initEta_ = NULL;
+				 m_pLBFGS = NULL;
 
 			
 			}

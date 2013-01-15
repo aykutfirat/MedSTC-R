@@ -24,6 +24,9 @@
 #include <string>
 #include "../SVMLight/svm_common.h"
 #include "MedSTC.h"
+#ifdef WINDOWS_VERSION
+	#include <direct.h>
+#endif
 #include <R.h>
 #include <Rdefines.h>
 using namespace std;
@@ -84,6 +87,43 @@ void read_data_from_R(Corpus* c, SEXP documents,int nd, int labels[])
 	c->num_docs = nd;
 	c->num_terms = num_terms;
 }
+#ifdef WINDOWS_VERSION
+char* createDir(char* prefix){
+				char *templat = "tmpXXXXXX";
+				char * dir;
+				char name[9]; 
+				int rez;
+				strcpy_s(name, sizeof(name), templat);
+				rez = _mktemp_s(name, sizeof(name));
+				if (rez == 0) {
+       				sprintf(dir, "%s_%s", prefix,name);
+       				if( _mkdir( dir ) != 0 ) 
+     					error("Problem creating directory %s \n",dir);
+				}
+				else {
+        			error("Temporary model directory name %s could not be created.", dir);
+				}
+				return dir;
+}
+#else
+char* createDir(char* prefix){          
+				char name[] ="tmpXXXXXX"; 
+				char * rez;
+				char dir[512];
+				rez = mktemp(name);
+				if (rez != NULL) {
+       				sprintf(dir, "%s_%s", prefix,rez);
+       				if( mkdir(dir,0700) != 0 ) 
+     					error("Problem creating directory %s \n",dir);
+				}
+				else {
+        			error("Temporary model directory name %s could not be created.", dir);
+				}
+				return dir;
+				
+}
+#endif
+
 extern "C" {
 SEXP medSTCTrain(SEXP documents_,
 			 SEXP labels_,
@@ -115,7 +155,7 @@ SEXP medSTCTrain(SEXP documents_,
     			CHECKLEN(labels_, Integer, nd);	
     			for (int i=0; i<nd;i++){
     				labels[i]=INTEGER(labels_)[i];
-    				}
+    			}
     		}
     		Params param;
 			CHECKLEN(ntopics_, Integer, 1);
@@ -147,20 +187,17 @@ SEXP medSTCTrain(SEXP documents_,
   			CHECKLEN(svm_alg_type_, Integer, 1);
   			param.SVM_ALGTYPE = INTEGER(svm_alg_type_)[0];
   			
-  			char res_file[512];
-  			sprintf(param.res_filename,"%s",CHAR(STRING_ELT(res_file_,0)));
   			char output_dir[512];
   			sprintf(output_dir,"%s",CHAR(STRING_ELT(output_dir_,0)));
+  			char res_file[512];
+  			sprintf(param.res_filename,"%s/%s",output_dir,CHAR(STRING_ELT(res_file_,0)));
  			Corpus *c = new Corpus();
 		    read_data_from_R(c,documents_,nd,labels);	
 			char dir[512];
 			sprintf(dir, "%s/s%d_c%d_f%d_s%d", output_dir, param.NTOPICS, (int) param.INITIAL_C,param.NFOLDS, param.SUPERVISED);
-			mkdir(dir,0755);
-			char paramFile[512];
-			sprintf(paramFile, "%s/param.dat", dir);
-			sprintf(param.train_filename,"*");
-			sprintf(param.test_filename,"*");
-			param.save_settings(paramFile);
+			char* dirTemp;
+			dirTemp = createDir(dir);		
+			sprintf(dir,"%s",dirTemp);
 			MedSTC model;
 			model.train("random", dir, c, &param);
 			delete c;
@@ -170,8 +207,8 @@ SEXP medSTCTrain(SEXP documents_,
 			SET_VECTOR_ELT(retval, 1, integer_model_parameters = allocVector(INTSXP, 4));
 			SET_VECTOR_ELT(retval, 2, dLogProbW = allocMatrix(REALSXP, model.m_nNumTerms,model.m_nK));
 			SET_VECTOR_ELT(retval, 3, dMu = allocVector(REALSXP, model.m_nDim * model.m_nLabelNum));
-			SET_VECTOR_ELT(retval, 4, dEta = allocVector(REALSXP, model.m_nK * model.m_nLabelNum));
-			SET_VECTOR_ELT(retval, 5, directory = allocVector(STRSXP, 1));			
+			SET_VECTOR_ELT(retval, 4, dEta = allocVector(REALSXP, model.m_nK * model.m_nLabelNum));		
+			SET_VECTOR_ELT(retval, 5, directory = allocVector(STRSXP, 1));
 			
 			REAL(double_model_parameters)[0]=model.m_dDeltaEll;
 			REAL(double_model_parameters)[1]=model.m_dLambda;
@@ -195,11 +232,16 @@ SEXP medSTCTrain(SEXP documents_,
 				REAL(dMu)[i]=model.m_dMu[i];	
 			for (i=0; i<model.m_nK*model.m_nLabelNum;i++)
 				REAL(dEta)[i]=model.m_dEta[i];	
-			
 			SET_STRING_ELT(directory, 0, mkChar(dir));
+			#ifdef WINDOWS_VERSION
+         		_rmdir(dir);
+         	#else
+         		rmdir(dir);
+         	#endif
 			UNPROTECT(1);
 			return retval;
-}
+			
+			}
 }
 extern "C" {
 SEXP medSTCTest(SEXP model,SEXP documents_,SEXP labels_, 
@@ -225,8 +267,7 @@ SEXP medSTCTest(SEXP model,SEXP documents_,SEXP labels_,
 			double m_dDeltaEll, m_dLambda,m_dRho, m_dGamma,m_dC,m_dLogLoss,m_dB,m_dPoisOffset,m_dsvm_primalobj;
 			double *m_dMu;
 			double *m_dEta;
-			char* m_directory;
-	
+			
 			Params param;
 			CHECKLEN(ntopics_, Integer, 1);
   			param.NTOPICS  = INTEGER(ntopics_)[0];
@@ -257,11 +298,10 @@ SEXP medSTCTest(SEXP model,SEXP documents_,SEXP labels_,
   			CHECKLEN(svm_alg_type_, Integer, 1);
   			param.SVM_ALGTYPE = INTEGER(svm_alg_type_)[0];
   			
-  			char res_file[512];
-  			sprintf(param.res_filename,"%s",CHAR(STRING_ELT(res_file_,0)));
   			char output_dir[512];
   			sprintf(output_dir,"%s",CHAR(STRING_ELT(output_dir_,0)));
-			
+  			char res_file[512];
+  			sprintf(param.res_filename,"%s/%s",output_dir,CHAR(STRING_ELT(res_file_,0)));
   			CHECK(documents_, NewList);
 			int nd = length(documents_);
 			int labels[nd];
@@ -276,7 +316,14 @@ SEXP medSTCTest(SEXP model,SEXP documents_,SEXP labels_,
     		}
     		
     		Corpus *c = new Corpus();
-			read_data_from_R(c,documents_,nd,labels);			
+			read_data_from_R(c,documents_,nd,labels);	
+			char dir[512];
+			sprintf(dir, "%s/s%d_c%d_f%d_s%d", output_dir, param.NTOPICS, (int) param.INITIAL_C,param.NFOLDS, param.SUPERVISED);
+			char* dirTemp;
+			dirTemp = createDir(dir);		
+			sprintf(dir,"%s",dirTemp);	
+			
+					
 			SEXP double_model_parameters = VECTOR_ELT(model,0);
 				m_dDeltaEll = REAL(double_model_parameters)[0];
 				m_dLambda = REAL(double_model_parameters)[1];
@@ -314,12 +361,10 @@ SEXP medSTCTest(SEXP model,SEXP documents_,SEXP labels_,
 				}
 				
 			SEXP directory = VECTOR_ELT(model,5);
-			sprintf(m_directory,"%s",CHAR(STRING_ELT(directory,0)));
-			
 			
 			MedSTC evlModel = MedSTC(m_nK,m_nLabelNum,m_nNumTerms,m_nDim,m_dDeltaEll,m_dLambda,m_dRho,m_dGamma,m_dC,
 			m_dLogLoss,m_dB,m_dPoisOffset,m_dsvm_primalobj, 
-			m_dLogProbW, m_dMu,m_dEta, m_directory);
+			m_dLogProbW, m_dMu,m_dEta, dir);
 			
 	
 			evlModel.predictTest(c, &param);
@@ -331,13 +376,13 @@ SEXP medSTCTest(SEXP model,SEXP documents_,SEXP labels_,
   				REAL(retval)[i+c->num_docs*j] =  c->docs[i].scores[j];
          	}
          	delete c;
+         	#ifdef WINDOWS_VERSION
+         		_rmdir(dir);
+         	#else
+         		rmdir(dir);
+         	#endif
          	UNPROTECT(1);
-			return retval;	/*
-			SEXP retval;
-			PROTECT(retval = allocVector(STRSXP, 1));
-			SET_STRING_ELT(retval, 0, mkChar("hello2"));
-			UNPROTECT(1);
-			return retval;*/
+			return retval;	
   	
 }
 }
