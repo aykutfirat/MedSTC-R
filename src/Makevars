@@ -2,7 +2,7 @@ SOURCES=$(wildcard MedSTC/*.cpp SVM_Multiclass/*.cpp SVMLight/*.cpp)
 
 OBJECTS = $(SOURCES:.cpp=.o)
 
-PKG_CPPFLAGS=-I. -Wall -pedantic -ansi
+PKG_CPPFLAGS=-I.
 
 all: $(SHLIB)
 

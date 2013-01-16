@@ -41,7 +41,5 @@ Included data sets:
 }
 \examples{
 ## See the demo for the newsgroup example:
-
 \dontrun{demo(medSTC)}
-
 }

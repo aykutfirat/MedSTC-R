@@ -1,5 +1,6 @@
-\name{predict.medSTC}
+\name{predict}
 \alias{predict.medSTC}
+\alias{predict}
 \Rdversion{1.0}
 
 \title{
@@ -10,11 +11,16 @@ MedSTC is a novel classification algorithm by Prof. Jun Zhu (http://www.ml-thu.n
 This function predicts test class labels using a medSTC model.
 }
 \usage{
-predict(model, documents) 
+## S3 method for class 'medSTC'
+predict(model,documents,...) 
 
 }
 
-\arguments{
+\arguments{ 
+
+  \item{model}{
+   		A model object of the medSTC class, which is obtained after running \code{medSTC}.
+   }
   \item{documents}{
     A list whose length is equal to the number of documents, D.   Each
   element of \var{documents} is an integer matrix with two rows.  Each
@@ -26,9 +32,9 @@ predict(model, documents)
   \var{documents[[i]][2,j]} is an integer specifying the number of times that word appears in
   the document.
   }
-   \item{model}{
-   		A model object of the medSTC class, which is obtained after running \code{medSTC}.
-   }
+  \item{...}{
+  	Currently not used.
+  }
 }
 \value{
 	\item{scores}{

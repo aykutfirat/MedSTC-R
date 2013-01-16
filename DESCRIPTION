@@ -3,7 +3,7 @@ Type: Package
 Title: A max-margin supervised Sparse Topical Coding Model 
 Version: 1.0.0
 Date: 2013-01-15
-Author: Jun Zhu <junzhu@cs.cmu.edu>, Aykut FIRAT <aykut@crimsonhexagon.com>
+Author: Jun Zhu <junzhu@cs.cmu.edu>, Aykut FIRAT <aykut@mit.edu>
 Maintainer: Aykut FIRAT <aykut@crimsonhexagon.com>
 Description: This is a C++ implementation of Sparse Topical Coding (STC), a model 
 			 of discrete data which is fully described in Zhu et al. (2011)

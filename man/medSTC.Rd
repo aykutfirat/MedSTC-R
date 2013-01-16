@@ -51,31 +51,36 @@ svm_alg_type=2, output_dir=".")
      is the unsupervised STC.
 	}
      
-    \item{primal svm}{
+    \item{primal_svm}{
      Only works when "supervised" is set at 1. If the value is "1", use the
      loss-augmented prediction (i.e., sub-gradient) to update document codes;
      use the gradient with Lagrangian multipliers to update document codes.
      }
-     \item{var max iter}{
+     \item{var_max_iter}{
      The maximum number of iterations of coordinate descent for a single document.
 	}
-     \item{var convergence}{
+     \item{convergence}{
      The convergence criteria for coordinate descent.  Stop if
      (objective_old - objective) / abs(objective_old) is less than this value (or
      after the maximum number of iterations). Note that "objective" is the objective 
      value for a single document.
 	}
-    \item{em max iter}{
+    \item{em_max_iter}{
      The maximum number of iterations of hierarchical sparse coding, dictionary learning, 
      and svm training (for supervised MedSTC).
 	}
-     \item{em convergence}{
+     \item{em_convergence}{
 
      The convergence criteria for coordinate descent. Stop if (objective_old -
      objective) / abs(objective_old) is less than this value (or after the
      maximum number of iterations).  Note that "objective" is the objective value 
      for the whole corpus.
 	} 
+	\item{svm_alg_type}{
+		If set to 0 then the n-slack multi-class SVM is used. If set to 2,
+     	then the 1-slack multi-class SVM is used. In our testing, the 1-slack
+     	SVM is faster.
+	}
 	\item{output_dir}{
 		A directory for writing intermediate results.
 	}

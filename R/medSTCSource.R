@@ -38,8 +38,9 @@ svm_alg_type=2, output_dir=".")
 }
 
 predict.medSTC <-
-function (model,documents,...) 
+function (object,documents,...) 
 {
+	model<-object
 	result<-list()
     integerLabels<-as.integer(factor(sample(model$labels,length(documents), replace=TRUE)))-1L 
     retval<-structure(.Call("medSTCTest",model$state, documents, integerLabels, as.integer(model$ntopics), 
