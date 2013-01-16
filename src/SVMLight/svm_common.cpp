@@ -19,6 +19,7 @@
 # include "ctype.h"
 # include "svm_common.h"
 # include "kernel.h"           /* this contains a user supplied kernel */
+#include <R.h>
 
 #define MAX(x,y)      ((x) < (y) ? (y) : (x))
 #define MIN(x,y)      ((x) > (y) ? (y) : (x))
@@ -105,7 +106,7 @@ double single_kernel(KERNEL_PARM *kernel_parm, SVECTOR *a, SVECTOR *b)
             return(tanh(kernel_parm->coef_lin*sprod_ss(a,b)+kernel_parm->coef_const)); 
     case CUSTOM: /* custom-kernel supplied in file kernel.h*/
             return(custom_kernel(kernel_parm,a,b)); 
-    default: printf("Error: Unknown kernel function\n"); exit(1);
+    default: error("Error: Unknown kernel function\n"); //exit(1);
   }
 }
 
@@ -775,8 +776,8 @@ double model_length_n(MODEL *model)
   SVECTOR  *weight;
 
   if(model->kernel_parm.kernel_type != LINEAR) {
-    printf("ERROR: model_length_n applies only to linear kernel!\n");
-    exit(1);
+    error("ERROR: model_length_n applies only to linear kernel!\n");
+    //exit(1);
   }
   weight_n=create_nvector(totwords);
   clear_nvector(weight_n,totwords);
@@ -902,8 +903,8 @@ void print_percent_progress(long *progress, long maximum,
 {
   if((percentperdot*(*progress-1)/maximum) 
      != (percentperdot*(*progress)/maximum)) {
-    printf("%s", symbol);
-    fflush(stdout);
+    Rprintf("%s", symbol);
+    
   }
   (*progress)++;
 }
@@ -1024,8 +1025,8 @@ MATRIX *cholesky_matrix(MATRIX *A)
   MATRIX *L;
   
   if(A->m != A->n) {
-    printf("ERROR: Matrix not quadratic. Cannot compute Cholesky!\n");
-    exit(1);
+    error("ERROR: Matrix not quadratic. Cannot compute Cholesky!\n");
+    //exit(1);
   }
   n=A->n;
   L=copy_matrix(A);
@@ -1035,7 +1036,7 @@ MATRIX *cholesky_matrix(MATRIX *A)
       for (sum=L->element[i][j],k=i-1;k>=0;k--) 
 	sum -= L->element[i][k]*L->element[j][k];
       if (i == j) {
-	if (sum <= 0.0) printf("Cholesky: Matrix not positive definite");
+	if (sum <= 0.0) Rprintf("Cholesky: Matrix not positive definite");
 	L->element[i][i]=sqrt(sum);
       } 
       else L->element[j][i]=sum/L->element[i][i];
@@ -1057,8 +1058,8 @@ double *find_indep_subset_of_matrix(MATRIX *A, double epsilon)
   MATRIX *L;
   
   if(A->m != A->n) {
-    printf("ERROR: Matrix not quadratic. Cannot compute Cholesky!\n");
-    exit(1);
+    error("ERROR: Matrix not quadratic. Cannot compute Cholesky!\n");
+    //exit(1);
   }
   n=A->n;
   L=copy_matrix(A);
@@ -1096,8 +1097,8 @@ MATRIX *invert_ltriangle_matrix(MATRIX *L)
   MATRIX *I;
   
   if(L->m != L->n) {
-    printf("ERROR: Matrix not quadratic. Cannot invert triangular matrix!\n");
-    exit(1);
+    error("ERROR: Matrix not quadratic. Cannot invert triangular matrix!\n");
+    //exit(1);
   }
   n=L->n;
   I=copy_matrix(L);
@@ -1204,8 +1205,8 @@ MATRIX *prod_matrix_matrix(MATRIX *A, MATRIX *B)
   MATRIX *C;
   
   if(A->m != B->n) {
-    printf("ERROR: Matrix size does not match. Cannot compute product!\n");
-    exit(1);
+    error("ERROR: Matrix size does not match. Cannot compute product!\n");
+    //exit(1);
   }
   C=create_matrix(A->n,B->m);
 
@@ -1227,13 +1228,13 @@ void print_matrix(MATRIX *matrix)
 {
   int i,j;
 
-  printf("\n");
-  printf("\n");
+  Rprintf("\n");
+  Rprintf("\n");
   for(i=0;i<matrix->n;i++) {
     for(j=0;j<matrix->m;j++) {
-      printf("%4.3f\t",matrix->element[i][j]);
+      Rprintf("%4.3f\t",matrix->element[i][j]);
     }
-    printf("\n");
+    Rprintf("\n");
   }
 }
 
@@ -1247,23 +1248,23 @@ void write_model(char *modelfile, MODEL *model)
   MODEL *compact_model=NULL;
  
   if(verbosity>=1) {
-    printf("Writing model file..."); fflush(stdout);
+    Rprintf("Writing model file..."); //
   }
 
   /* Replace SV with single weight vector */
   if(0 && model->kernel_parm.kernel_type == LINEAR) {
     if(verbosity>=1) {
-      printf("(compacting..."); fflush(stdout);
+      Rprintf("(compacting..."); //
     }
     compact_model=compact_linear_model(model);
     model=compact_model;
     if(verbosity>=1) {
-      printf("done)"); fflush(stdout);
+      Rprintf("done)"); //
     }
   }
 
   if ((modelfl = fopen (modelfile, "w")) == NULL)
-  { perror (modelfile); exit (1); }
+  { error ("modelfile could not be opened");  }
   fprintf(modelfl,"SVM-light Version %s\n",VERSION);
   fprintf(modelfl,"%ld # kernel type\n",
 	  model->kernel_parm.kernel_type);
@@ -1308,7 +1309,7 @@ void write_model(char *modelfile, MODEL *model)
   if(compact_model)
     free_model(compact_model,1);
   if(verbosity>=1) {
-    printf("done\n");
+    Rprintf("done\n");
   }
 }
 
@@ -1325,7 +1326,7 @@ MODEL *read_model(char *modelfile)
   MODEL *model;
 
   if(verbosity>=1) {
-    printf("Reading model..."); fflush(stdout);
+    Rprintf("Reading model..."); 
   }
 
   nol_ll(modelfile,&max_sv,&max_words,&ll); /* scan size of model file */
@@ -1337,12 +1338,12 @@ MODEL *read_model(char *modelfile)
   model = (MODEL *)my_malloc(sizeof(MODEL));
 
   if ((modelfl = fopen (modelfile, "r")) == NULL)
-  { perror (modelfile); exit (1); }
+  { error ("modelfile could not be opened");  }
 
   fscanf(modelfl,"SVM-light Version %s\n",version_buffer);
   if(strcmp(version_buffer,VERSION)) {
-    perror ("Version of model-file does not match version of svm_classify!"); 
-    exit (1); 
+    error ("Version of model-file does not match version of svm_classify!"); 
+    //exit (1); 
   }
   fscanf(modelfl,"%ld%*[^\n]\n", &model->kernel_parm.kernel_type);  
   fscanf(modelfl,"%ld%*[^\n]\n", &model->kernel_parm.poly_degree);
@@ -1365,9 +1366,9 @@ MODEL *read_model(char *modelfile)
     fgets(line,(int)ll,modelfl);
     if(!parse_document(line,words,&(model->alpha[i]),&queryid,&slackid,
 		       &costfactor,&wpos,max_words,&comment, true)) {
-      printf("\nParsing error while reading model file in SV %ld!\n%s",
+      error("\nParsing error while reading model file in SV %ld!\n%s",
 	     i,line);
-      exit(1);
+      //exit(1);
     }
     model->supvec[i] = create_example(-1,
 				      0,0,
@@ -1378,7 +1379,7 @@ MODEL *read_model(char *modelfile)
   free(line);
   free(words);
   if(verbosity>=1) {
-    fprintf(stdout, "OK. (%d support vectors read)\n",(int)(model->sv_num-1));
+    Rprintf("OK. (%d support vectors read)\n",(int)(model->sv_num-1));
   }
   return(model);
 }
@@ -1466,14 +1467,14 @@ void read_documents(char *docfile, DOC ***docs, double **label,
 	FILE *docfl;
 
 	if(verbosity>=1) {
-		printf("Scanning examples..."); fflush(stdout);
+		Rprintf("Scanning examples..."); 
 	}
 	nol_ll(docfile, &max_docs, &max_words_doc, &ll); /* scan size of input file */
 	max_words_doc += 2;
 	ll += 2;
 	max_docs += 2;
 	if(verbosity >= 1) {
-		printf("done\n"); fflush(stdout);
+		Rprintf("done\n"); 
 	}
 
 	(*docs) = (DOC **)my_malloc(sizeof(DOC *) * max_docs);    /* feature vectors */
@@ -1481,11 +1482,11 @@ void read_documents(char *docfile, DOC ***docs, double **label,
 	line = (char *)my_malloc(sizeof(char)*ll);
 
 	if ((docfl = fopen (docfile, "r")) == NULL)
-	{ perror (docfile); exit (1); }
+	{ error ("document file could not be opened");  }
 
 	words = (TOKEN *)my_malloc(sizeof(TOKEN)*(max_words_doc + 10));
 	if(verbosity>=1) {
-		printf("Reading examples into memory..."); fflush(stdout);
+		Rprintf("Reading examples into memory..."); 
 	}
 	dnum = 0;
 	(*totwords) = 0;
@@ -1493,8 +1494,8 @@ void read_documents(char *docfile, DOC ***docs, double **label,
 		if(line[0] == '#') continue;  /* line contains comments */
 		if(!parse_document(line, words, &doc_label, &queryid, &slackid, &costfactor,
 			&wpos, max_words_doc, &comment, false)) {
-				printf("\nParsing error in line %ld!\n%s",dnum,line);
-				exit(1);
+				error("\nParsing error in line %ld!\n%s",dnum,line);
+				//exit(1);
 		}
 		(*label)[dnum] = doc_label + 1;
 		/* printf("docnum=%ld: Class=%f ",dnum,doc_label); */
@@ -1504,9 +1505,9 @@ void read_documents(char *docfile, DOC ***docs, double **label,
 		if((wpos>1) && ((words[wpos-2]).wnum>(*totwords))) 
 			(*totwords) = (words[wpos-2]).wnum;
 		if((*totwords) > MAXFEATNUM) {
-			printf("\nMaximum feature number exceeds limit defined in MAXFEATNUM!\n");
-			printf("LINE: %s\n",line);
-			exit(1);
+			Rprintf("\nMaximum feature number exceeds limit defined in MAXFEATNUM!\n");
+			error("LINE: %s\n",line);
+			//exit(1);
 		}
 		(*docs)[dnum] = create_example(dnum, queryid, slackid, costfactor,
 			create_svector(words, comment, 1.0) );
@@ -1514,7 +1515,7 @@ void read_documents(char *docfile, DOC ***docs, double **label,
 		dnum ++;  
 		if(verbosity >= 1) {
 			if((dnum % 100) == 0) {
-				printf("%ld..",dnum); fflush(stdout);
+				Rprintf("%ld..",dnum); 
 			}
 		}
 	} 
@@ -1523,7 +1524,7 @@ void read_documents(char *docfile, DOC ***docs, double **label,
 	free(line);
 	free(words);
 	if( verbosity >= 1 ) {
-		fprintf(stdout, "OK. (%ld examples read)\n", dnum);
+		Rprintf("OK. (%ld examples read)\n", dnum);
 	}
 	(*totdoc) = dnum;
 }
@@ -1564,9 +1565,9 @@ int parse_document(char *line, TOKEN *words, double *label,
 	pos=0;
 	while((featurepair[pos] != ':') && featurepair[pos]) pos++;
 	if(featurepair[pos] == ':') {
-		perror ("Line must start with label or 0!!!\n"); 
-		printf("LINE: %s\n",line);
-		exit (1); 
+		Rprintf ("Line must start with label or 0!!!\n"); 
+		error("LINE: %s\n",line);
+		//exit (1); 
 	}
 	/* read the target value */
 	pos = 0;
@@ -1594,9 +1595,9 @@ int parse_document(char *line, TOKEN *words, double *label,
 			if(wnum > 0) 
 				(*slackid)=(long)wnum;
 			else {
-				perror ("Slack-id must be greater or equal to 1!!!\n"); 
-				printf("LINE: %s\n",line);
-				exit (1); 
+				Rprintf ("Slack-id must be greater or equal to 1!!!\n"); 
+				error("LINE: %s\n",line);
+				//exit (1); 
 			}
 		}
 		else if(sscanf(featurepair,"cost:%lf%s",&weight,junk)==1) {
@@ -1607,9 +1608,9 @@ int parse_document(char *line, TOKEN *words, double *label,
 			wnum += 1;
 			/* it is a regular feature */
 			if(wnum<=0) { 
-				perror ("Feature numbers must be larger or equal to 1!!!\n"); 
-				printf("LINE: %s\n",line);
-				exit (1); 
+				Rprintf ("Feature numbers must be larger or equal to 1!!!\n"); 
+				error("LINE: %s\n",line);
+				//exit (1); 
 			}
 			//if((wpos>0) && ((words[wpos-1]).wnum >= wnum)) { 
 			//	perror ("Features must be in increasing order!!!\n"); 
@@ -1635,9 +1636,9 @@ int parse_document(char *line, TOKEN *words, double *label,
 
 			wpos++;
 		} else {
-			perror ("Cannot parse feature/value pair!!!\n"); 
-			printf("'%s' in LINE: %s\n",featurepair,line);
-			exit (1); 
+			Rprintf ("Cannot parse feature/value pair!!!\n"); 
+			error("'%s' in LINE: %s\n",featurepair,line);
+			//exit (1); 
 		}
 	}
 	(words[wpos]).wnum=0;
@@ -1654,22 +1655,22 @@ double *read_alphas(char *alphafile,long totdoc)
   long dnum;
 
   if ((fl = fopen (alphafile, "r")) == NULL)
-  { perror (alphafile); exit (1); }
+  { error ("alphafile could not be opened");  }
 
   alpha = (double *)my_malloc(sizeof(double)*totdoc);
   if(verbosity>=1) {
-    printf("Reading alphas..."); fflush(stdout);
+    Rprintf("Reading alphas..."); 
   }
   dnum=0;
   while((!feof(fl)) && fscanf(fl,"%lf\n",&alpha[dnum]) && (dnum<totdoc)) {
     dnum++;
   }
   if(dnum != totdoc)
-  { perror ("\nNot enough values in alpha file!"); exit (1); }
+  { error ("\nNot enough values in alpha file!");  }
   fclose(fl);
 
   if(verbosity>=1) {
-    printf("done\n"); fflush(stdout);
+    Rprintf("done\n");
   }
 
   return(alpha);
@@ -1712,54 +1713,54 @@ int check_learning_parms(LEARN_PARM *learn_parm, KERNEL_PARM *kernel_parm)
 {
   if((learn_parm->skip_final_opt_check) 
      && (kernel_parm->kernel_type == LINEAR)) {
-    printf("\nIt does not make sense to skip the final optimality check for linear kernels.\n\n");
+    Rprintf("\nIt does not make sense to skip the final optimality check for linear kernels.\n\n");
     learn_parm->skip_final_opt_check=0;
   }    
   if((learn_parm->skip_final_opt_check) 
      && (learn_parm->remove_inconsistent)) {
-    printf("\nIt is necessary to do the final optimality check when removing inconsistent \nexamples.\n");
+    Rprintf("\nIt is necessary to do the final optimality check when removing inconsistent \nexamples.\n");
     return(0);
   }    
   if((learn_parm->svm_maxqpsize<2)) {
-    printf("\nMaximum size of QP-subproblems not in valid range: %ld [2..]\n",learn_parm->svm_maxqpsize); 
+    Rprintf("\nMaximum size of QP-subproblems not in valid range: %ld [2..]\n",learn_parm->svm_maxqpsize); 
     return(0);
   }
   if((learn_parm->svm_maxqpsize<learn_parm->svm_newvarsinqp)) {
-    printf("\nMaximum size of QP-subproblems [%ld] must be larger than the number of\n",learn_parm->svm_maxqpsize); 
-    printf("new variables [%ld] entering the working set in each iteration.\n",learn_parm->svm_newvarsinqp); 
+    Rprintf("\nMaximum size of QP-subproblems [%ld] must be larger than the number of\n",learn_parm->svm_maxqpsize); 
+    Rprintf("new variables [%ld] entering the working set in each iteration.\n",learn_parm->svm_newvarsinqp); 
     return(0);
   }
   if(learn_parm->svm_iter_to_shrink<1) {
-    printf("\nMaximum number of iterations for shrinking not in valid range: %ld [1,..]\n",learn_parm->svm_iter_to_shrink);
+    Rprintf("\nMaximum number of iterations for shrinking not in valid range: %ld [1,..]\n",learn_parm->svm_iter_to_shrink);
     return(0);
   }
   if(learn_parm->svm_c<0) {
-    printf("\nThe C parameter must be greater than zero!\n\n");
+    Rprintf("\nThe C parameter must be greater than zero!\n\n");
     return(0);
   }
   if(learn_parm->transduction_posratio>1) {
-    printf("\nThe fraction of unlabeled examples to classify as positives must\n");
-    printf("be less than 1.0 !!!\n\n");
+    Rprintf("\nThe fraction of unlabeled examples to classify as positives must\n");
+    Rprintf("be less than 1.0 !!!\n\n");
     return(0);
   }
   if(learn_parm->svm_costratio<=0) {
-    printf("\nThe COSTRATIO parameter must be greater than zero!\n\n");
+    Rprintf("\nThe COSTRATIO parameter must be greater than zero!\n\n");
     return(0);
   }
   if(learn_parm->epsilon_crit<=0) {
-    printf("\nThe epsilon parameter must be greater than zero!\n\n");
+    Rprintf("\nThe epsilon parameter must be greater than zero!\n\n");
     return(0);
   }
   if(learn_parm->rho<0) {
-    printf("\nThe parameter rho for xi/alpha-estimates and leave-one-out pruning must\n");
-    printf("be greater than zero (typically 1.0 or 2.0, see T. Joachims, Estimating the\n");
-    printf("Generalization Performance of an SVM Efficiently, ICML, 2000.)!\n\n");
+    Rprintf("\nThe parameter rho for xi/alpha-estimates and leave-one-out pruning must\n");
+    Rprintf("be greater than zero (typically 1.0 or 2.0, see T. Joachims, Estimating the\n");
+    Rprintf("Generalization Performance of an SVM Efficiently, ICML, 2000.)!\n\n");
     return(0);
   }
   if((learn_parm->xa_depth<0) || (learn_parm->xa_depth>100)) {
-    printf("\nThe parameter depth for ext. xi/alpha-estimates must be in [0..100] (zero\n");
-    printf("for switching to the conventional xa/estimates described in T. Joachims,\n");
-    printf("Estimating the Generalization Performance of an SVM Efficiently, ICML, 2000.)\n");
+    Rprintf("\nThe parameter depth for ext. xi/alpha-estimates must be in [0..100] (zero\n");
+    Rprintf("for switching to the conventional xa/estimates described in T. Joachims,\n");
+    Rprintf("Estimating the Generalization Performance of an SVM Efficiently, ICML, 2000.)\n");
   }
   return(1);
 }
@@ -1774,7 +1775,7 @@ void nol_ll(char *file, long int *nol, long int *wol, long int *ll)
   long current_length,current_wol;
 
   if ((fl = fopen (file, "r")) == NULL)
-  { perror (file); exit (1); }
+  { error ("File opening problem");  }
   current_length=0;
   current_wol=0;
   (*ll)=0;
@@ -1863,17 +1864,17 @@ void *my_malloc(size_t size)
   if(size<=0) size=1; /* for AIX compatibility */
   ptr=(void *)malloc(size);
   if(!ptr) { 
-    perror ("Out of memory!\n"); 
-    exit (1); 
+    error ("Out of memory!\n"); 
+    //exit (1); 
   }
   return(ptr);
 }
 
 void copyright_notice(void)
 {
-  printf("\nCopyright: Thorsten Joachims, thorsten@joachims.org\n\n");
-  printf("This software is available for non-commercial use only. It must not\n");
-  printf("be modified and distributed without prior permission of the author.\n");
-  printf("The author is not responsible for implications from the use of this\n");
-  printf("software.\n\n");
+  Rprintf("\nCopyright: Thorsten Joachims, thorsten@joachims.org\n\n");
+  Rprintf("This software is available for non-commercial use only. It must not\n");
+  Rprintf("be modified and distributed without prior permission of the author.\n");
+  Rprintf("The author is not responsible for implications from the use of this\n");
+  Rprintf("software.\n\n");
 }

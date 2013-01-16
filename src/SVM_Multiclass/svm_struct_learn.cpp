@@ -24,6 +24,7 @@
 #include "svm_struct_api.h"
 #include <assert.h>
 #include <vector>
+#include <R.h>
 //using namespace std;
 
 #define MAX(x,y)      ((x) < (y) ? (y) : (x))
@@ -88,13 +89,12 @@ void svm_learn_struct(SAMPLE sample, STRUCT_LEARN_PARM *sparm,
 		lparm->svm_c=999999999999999.0; /* upper bound C must never be reached */
 		lparm->sharedslack=0;
 		if(kparm->kernel_type != LINEAR) {
-			printf("ERROR: Kernels are not implemented for L2 slack norm!"); 
-			fflush(stdout);
-			exit(0); 
+			error("ERROR: Kernels are not implemented for L2 slack norm!"); 
+	 
 		}
 	} else {
-		printf("ERROR: Slack norm must be L1 or L2!"); fflush(stdout);
-		exit(0);
+		error("ERROR: Slack norm must be L1 or L2!"); 
+		
 	}
 
 
@@ -153,7 +153,7 @@ void svm_learn_struct(SAMPLE sample, STRUCT_LEARN_PARM *sparm,
 			tolerance=0; 
 		lparm->epsilon_crit=epsilon/2;  /* svm precision must be higher than eps */
 		if(struct_verbosity>=1)
-			printf("Setting current working precision to %g.\n",epsilon);
+			Rprintf("Setting current working precision to %g.\n",epsilon);
 
 		do { /* iteration until (approx) all SV are found for current
 			 precision and tolerance */
@@ -167,8 +167,8 @@ void svm_learn_struct(SAMPLE sample, STRUCT_LEARN_PARM *sparm,
 				 producing new constraints */
 
 				if(struct_verbosity>=1) { 
-					printf("Iter %i (%ld active): ",++numIt,activenum); 
-					fflush(stdout);
+					Rprintf("Iter %i (%ld active): ",++numIt,activenum); 
+					
 				}
 
 				ceps=0;
@@ -197,7 +197,7 @@ void svm_learn_struct(SAMPLE sample, STRUCT_LEARN_PARM *sparm,
 								activenum--;
 								opti[i]=opti_round; 
 							}
-							if(struct_verbosity>=2) printf("no-incorrect-found(%i) ",i);
+							if(struct_verbosity>=2) Rprintf("no-incorrect-found(%i) ",i);
 							continue;
 						}
 
@@ -240,16 +240,16 @@ void svm_learn_struct(SAMPLE sample, STRUCT_LEARN_PARM *sparm,
 						dist = classify_example(svmModel, doc);
 						ceps = MAX(ceps,margin-dist-slack);
 						if(slack > (margin-dist+0.0001)) {
-							printf("\nWARNING: Slack of most violated constraint is smaller than slack of working\n");
-							printf("         set! There is probably a bug in 'find_most_violated_constraint_*'.\n");
-							printf("Ex %d: slack=%f, newslack=%f\n",i,slack,margin-dist);
+							Rprintf("\nWARNING: Slack of most violated constraint is smaller than slack of working\n");
+							Rprintf("         set! There is probably a bug in 'find_most_violated_constraint_*'.\n");
+							Rprintf("Ex %d: slack=%f, newslack=%f\n",i,slack,margin-dist);
 							/* exit(1); */
 						}
 						if((dist+slack)<(margin-epsilon)) { 
 							if(struct_verbosity>=2)
-							{printf("(%i,eps=%.2f) ",i,margin-dist-slack); fflush(stdout);}
+							{Rprintf("(%i,eps=%.2f) ",i,margin-dist-slack); }
 							if(struct_verbosity==1)
-							{/*printf("."); fflush(stdout);*/}
+							{/*Rprintf("."); */}
 
 							/**** resize constraint matrix and add new constraint ****/
 							cset.m ++;
@@ -275,7 +275,7 @@ void svm_learn_struct(SAMPLE sample, STRUCT_LEARN_PARM *sparm,
 									cset.lhs[cset.m-1] = create_example(cset.m-1,0,i+1,1,
 									copy_svector(fy));
 								else if(sparm->slack_norm == 2)
-									exit(1);
+									error("slack norm");
 							}
 							cset.rhs = (double *)realloc(cset.rhs,sizeof(double)*cset.m);
 							cset.rhs[cset.m-1] = margin;
@@ -292,7 +292,7 @@ void svm_learn_struct(SAMPLE sample, STRUCT_LEARN_PARM *sparm,
 
 							
 						} else {
-							//printf("+"); fflush(stdout); 
+							//Rprintf("+");  
 							if(opti[i] != opti_round) {
 								activenum--;
 								opti[i]=opti_round; 
@@ -309,7 +309,7 @@ void svm_learn_struct(SAMPLE sample, STRUCT_LEARN_PARM *sparm,
 						|| ((newconstraints > 0) && (i == n-1))	|| (new_precision && (i == n-1))) 
 					{
 						if(struct_verbosity >= 1 ) {
-							//printf("*");fflush(stdout);
+							//Rprintf("*");
 						}
 						rt2 = get_runtime();
 						free_model(svmModel, 0);
@@ -350,19 +350,19 @@ void svm_learn_struct(SAMPLE sample, STRUCT_LEARN_PARM *sparm,
 				rt1 = get_runtime();
 
 				if(struct_verbosity >= 1 )
-					printf("(NumConst=%d, SV=%ld, CEps=%.4f, QPEps=%.4f)\n",cset.m,
+					Rprintf("(NumConst=%d, SV=%ld, CEps=%.4f, QPEps=%.4f)\n",cset.m,
 					svmModel->sv_num-1, ceps, svmModel->maxdiff);
 
 				/* Check if some of the linear constraints have not been
 				active in a while. Those constraints are then removed to
 				avoid bloating the working set beyond necessity. */
 				if( struct_verbosity >= 2 )
-					printf("Reducing working set...");fflush(stdout);
+					Rprintf("Reducing working set...");
 				remove_inactive_constraints(&cset,alpha,optcount,alphahist,
 					MAX(50,optcount-lastoptcount));
 				lastoptcount = optcount;
 				if( struct_verbosity >= 2 )
-					printf("done. (NumConst=%d)\n", cset.m);
+					Rprintf("done. (NumConst=%d)\n", cset.m);
 
 				rt_total += MAX(get_runtime()-rt1,0);
 			} while(use_shrinking && (activenum > 0)); /* when using shrinking, repeat until all examples 
@@ -401,24 +401,24 @@ void svm_learn_struct(SAMPLE sample, STRUCT_LEARN_PARM *sparm,
 		sm->primalobj = 0.5*modellength*modellength + svmCnorm * (slacksum + n*ceps);
 
 	if(struct_verbosity>=1) {
-		printf("Final epsilon on KKT-Conditions: %.5f\n", MAX(svmModel->maxdiff,epsilon));
-		printf("Upper bound on duality gap: %.5f\n", dualitygap);
-		printf("Dual objective value: dval=%.5f\n", alphasum-0.5*modellength*modellength);
-		printf("Total number of constraints in final working set: %i (of %i)\n",(int)cset.m,(int)totconstraints);
-		printf("Number of iterations: %d\n",numIt);
-		printf("Number of calls to 'find_most_violated_constraint': %ld\n",argmax_count);
+		Rprintf("Final epsilon on KKT-Conditions: %.5f\n", MAX(svmModel->maxdiff,epsilon));
+		Rprintf("Upper bound on duality gap: %.5f\n", dualitygap);
+		Rprintf("Dual objective value: dval=%.5f\n", alphasum-0.5*modellength*modellength);
+		Rprintf("Total number of constraints in final working set: %i (of %i)\n",(int)cset.m,(int)totconstraints);
+		Rprintf("Number of iterations: %d\n",numIt);
+		Rprintf("Number of calls to 'find_most_violated_constraint': %ld\n",argmax_count);
 		if(sparm->slack_norm == 1) {
-			printf("Number of SV: %ld \n", svmModel->sv_num-1);
-			printf("Number of non-zero slack variables: %ld (out of %ld)\n", svmModel->at_upper_bound,n);
-			printf("Norm of weight vector: |w|=%.5f\n",modellength);
+			Rprintf("Number of SV: %ld \n", svmModel->sv_num-1);
+			Rprintf("Number of non-zero slack variables: %ld (out of %ld)\n", svmModel->at_upper_bound,n);
+			Rprintf("Norm of weight vector: |w|=%.5f\n",modellength);
 		} else if(sparm->slack_norm == 2){ 
-			printf("Number of SV: %ld (including %ld at upper bound)\n", svmModel->sv_num-1,svmModel->at_upper_bound);
-			printf("Norm of weight vector (including L2-loss): |w|=%.5f\n", modellength);
+			Rprintf("Number of SV: %ld (including %ld at upper bound)\n", svmModel->sv_num-1,svmModel->at_upper_bound);
+			Rprintf("Norm of weight vector (including L2-loss): |w|=%.5f\n", modellength);
 		}
-		printf("Norm. sum of slack variables (on working set): sum(xi_i)/n=%.5f\n",slacksum/n);
-		printf("Norm of longest difference vector: ||Psi(x,y)-Psi(x,ybar)||=%.5f\n",
+		Rprintf("Norm. sum of slack variables (on working set): sum(xi_i)/n=%.5f\n",slacksum/n);
+		Rprintf("Norm of longest difference vector: ||Psi(x,y)-Psi(x,ybar)||=%.5f\n",
 			length_of_longest_document_vector(cset.lhs,cset.m,kparm));
-		printf("Runtime in cpu-seconds: %.2f (%.2f%% for QP, %.2f%% for Argmax, %.2f%% for Psi, %.2f%% for init)\n",
+		Rprintf("Runtime in cpu-seconds: %.2f (%.2f%% for QP, %.2f%% for Argmax, %.2f%% for Psi, %.2f%% for init)\n",
 			rt_total/100.0, (100.0*rt_opt)/rt_total, (100.0*rt_viol)/rt_total, 
 			(100.0*rt_psi)/rt_total, (100.0*rt_init)/rt_total);
 	}
@@ -508,13 +508,13 @@ void svm_learn_struct_joint(SAMPLE sample, STRUCT_LEARN_PARM *sparm,
 		lparm->sharedslack=1;
 	}
 	else if(sparm->slack_norm == 2) {
-		printf("ERROR: The joint algorithm does not apply to L2 slack norm!"); 
-		fflush(stdout);
-		exit(0); 
+		error("ERROR: The joint algorithm does not apply to L2 slack norm!"); 
+		
+ 
 	}
 	else {
-		printf("ERROR: Slack norm must be L1 or L2!"); fflush(stdout);
-		exit(0);
+		error("ERROR: Slack norm must be L1 or L2!"); 
+
 	}
 
 
@@ -569,9 +569,9 @@ void svm_learn_struct_joint(SAMPLE sample, STRUCT_LEARN_PARM *sparm,
 		/* NOTE:  */
 		for(i=0;i<n;i++) 
 			if(loss(ex[i].y,ex[i].y,sparm) != 0) {
-				printf("ERROR: Loss function returns non-zero value loss(y_%d,y_%d)\n",i,i);
-				printf("       W4 algorithm assumes that loss(y_i,y_i)=0 for all i.\n");
-				exit(1);
+				Rprintf("ERROR: Loss function returns non-zero value loss(y_%d,y_%d)\n",i,i);
+				error("       W4 algorithm assumes that loss(y_i,y_i)=0 for all i.\n");
+				
 			}
 	}
 
@@ -592,8 +592,8 @@ void svm_learn_struct_joint(SAMPLE sample, STRUCT_LEARN_PARM *sparm,
 	do { /* iteratively find and add constraints to working set */
 
 		if(struct_verbosity>=1) { 
-			printf("Iter %i: ",++numIt); 
-			fflush(stdout);
+			Rprintf("Iter %i: ",++numIt); 
+			
 		}
 
 		rt1 = get_runtime();
@@ -672,7 +672,7 @@ void svm_learn_struct_joint(SAMPLE sample, STRUCT_LEARN_PARM *sparm,
 				viol_est*=((double)n/j);
 				epsilon_est=(1-(double)j/n)*epsilon_est+(double)j/n*(viol_est-slack);
 				if((struct_verbosity >= 1) && (j!=n))
-					printf("(upd=%5.1f%%,eps^=%.4f,eps*=%.4f)",
+					Rprintf("(upd=%5.1f%%,eps^=%.4f,eps*=%.4f)",
 					100.0*j/n,viol_est-slack,epsilon_est);
 			}
 			lhsXw=rhs-viol;
@@ -728,9 +728,9 @@ void svm_learn_struct_joint(SAMPLE sample, STRUCT_LEARN_PARM *sparm,
 
 		/**** if `error', then add constraint and recompute QP ****/
 		if(slack > (rhs-lhsXw+0.000001)) {
-			printf("\nWARNING: Slack of most violated constraint is smaller than slack of working\n");
-			printf("         set! There is probably a bug in 'find_most_violated_constraint_*'.\n");
-			printf("slack=%f, newslack=%f\n",slack,rhs-lhsXw);
+			Rprintf("\nWARNING: Slack of most violated constraint is smaller than slack of working\n");
+			Rprintf("         set! There is probably a bug in 'find_most_violated_constraint_*'.\n");
+			Rprintf("slack=%f, newslack=%f\n",slack,rhs-lhsXw);
 			/* exit(1); */
 		}
 		ceps = MAX(0,rhs-lhsXw-slack);
@@ -759,7 +759,7 @@ void svm_learn_struct_joint(SAMPLE sample, STRUCT_LEARN_PARM *sparm,
 
 			/**** get new QP solution ****/
 			if(struct_verbosity >= 1) {
-				printf("*");fflush(stdout);
+				Rprintf("*");
 			}
 			if(struct_verbosity >= 2) rt2 = get_runtime();
 			/* set svm precision so that higher than eps of most violated constr */
@@ -799,15 +799,15 @@ void svm_learn_struct_joint(SAMPLE sample, STRUCT_LEARN_PARM *sparm,
 			/* Check if some of the linear constraints have not been
 			active in a while. Those constraints are then removed to
 			avoid bloating the working set beyond necessity. */
-			if(struct_verbosity>=3) printf("Reducing working set...");fflush(stdout);
+			if(struct_verbosity>=3) Rprintf("Reducing working set...");
 			remove_inactive_constraints(&cset,alpha,optcount,alphahist,50);
-			if( struct_verbosity >= 3 ) printf("done. ");
+			if( struct_verbosity >= 3 ) Rprintf("done. ");
 		} else {
 			free_svector(lhs);
 		}
 
 		if(struct_verbosity>=1)
-			printf("(NumConst=%d, SV=%ld, CEps=%.4f, QPEps=%.4f)\n",cset.m,
+			Rprintf("(NumConst=%d, SV=%ld, CEps=%.4f, QPEps=%.4f)\n",cset.m,
 			svmModel->sv_num-1, ceps, svmModel->maxdiff);
 
 		rt_total+=MAX(get_runtime()-rt1,0);
@@ -821,7 +821,7 @@ void svm_learn_struct_joint(SAMPLE sample, STRUCT_LEARN_PARM *sparm,
 	else modellength = model_length_s(svmModel);
 	sm->primalobj = 0.5*modellength*modellength + sparm->C*viol;
 	if(struct_verbosity>=1) {
-		printf("Final epsilon on KKT-Conditions: %.5f\n", MAX(svmModel->maxdiff,ceps));
+		Rprintf("Final epsilon on KKT-Conditions: %.5f\n", MAX(svmModel->maxdiff,ceps));
 
 		slack = 0;
 		for(j=0; j<cset.m; j++) 
@@ -833,27 +833,27 @@ void svm_learn_struct_joint(SAMPLE sample, STRUCT_LEARN_PARM *sparm,
 		else modellength = model_length_s(svmModel);
 		dualitygap = (0.5*modellength*modellength+sparm->C*viol) - (alphasum-0.5*modellength*modellength);
 
-		printf("Upper bound on duality gap: %.5f\n", dualitygap);
-		printf("Dual objective value: dval=%.5f\n", alphasum-0.5*modellength*modellength);
-		printf("Primal objective value: pval=%.5f\n", 0.5*modellength*modellength+sparm->C*viol);
-		printf("Total number of constraints in final working set: %i (of %i)\n",(int)cset.m,(int)totconstraints);
-		printf("Number of iterations: %d\n",numIt);
-		printf("Number of calls to 'find_most_violated_constraint': %ld\n",argmax_count);
-		printf("Number of SV: %ld \n",svmModel->sv_num-1);
-		printf("Norm of weight vector: |w|=%.5f\n",modellength);
-		printf("Value of slack variable (on working set): xi=%.5f\n",slack);
-		printf("Value of slack variable (global): xi=%.5f\n",viol);
-		printf("Norm of longest difference vector: ||Psi(x,y)-Psi(x,ybar)||=%.5f\n",
+		Rprintf("Upper bound on duality gap: %.5f\n", dualitygap);
+		Rprintf("Dual objective value: dval=%.5f\n", alphasum-0.5*modellength*modellength);
+		Rprintf("Primal objective value: pval=%.5f\n", 0.5*modellength*modellength+sparm->C*viol);
+		Rprintf("Total number of constraints in final working set: %i (of %i)\n",(int)cset.m,(int)totconstraints);
+		Rprintf("Number of iterations: %d\n",numIt);
+		Rprintf("Number of calls to 'find_most_violated_constraint': %ld\n",argmax_count);
+		Rprintf("Number of SV: %ld \n",svmModel->sv_num-1);
+		Rprintf("Norm of weight vector: |w|=%.5f\n",modellength);
+		Rprintf("Value of slack variable (on working set): xi=%.5f\n",slack);
+		Rprintf("Value of slack variable (global): xi=%.5f\n",viol);
+		Rprintf("Norm of longest difference vector: ||Psi(x,y)-Psi(x,ybar)||=%.5f\n",
 			length_of_longest_document_vector(cset.lhs,cset.m,kparm));
 		if(struct_verbosity>=2) 
-			printf("Runtime in cpu-seconds: %.2f (%.2f%% for QP, %.2f%% for kernel, %.2f%% for Argmax, %.2f%% for Psi, %.2f%% for init, %.2f%% for cache update, %.2f%% for cache const, %.2f%% for cache add (incl. %.2f%% for sum))\n",
+			Rprintf("Runtime in cpu-seconds: %.2f (%.2f%% for QP, %.2f%% for kernel, %.2f%% for Argmax, %.2f%% for Psi, %.2f%% for init, %.2f%% for cache update, %.2f%% for cache const, %.2f%% for cache add (incl. %.2f%% for sum))\n",
 			rt_total/100.0, (100.0*rt_opt)/rt_total, (100.0*rt_kernel)/rt_total,
 			(100.0*rt_viol)/rt_total, (100.0*rt_psi)/rt_total, 
 			(100.0*rt_init)/rt_total,(100.0*rt_cacheupdate)/rt_total,
 			(100.0*rt_cacheconst)/rt_total,(100.0*rt_cacheadd)/rt_total,
 			(100.0*rt_cachesum)/rt_total);
 		else if(struct_verbosity==1) 
-			printf("Runtime in cpu-seconds: %.2f\n",rt_total/100.0);
+			Rprintf("Runtime in cpu-seconds: %.2f\n",rt_total/100.0);
 	}
 	if(ccache) {
 		long cnum=0;
@@ -861,7 +861,7 @@ void svm_learn_struct_joint(SAMPLE sample, STRUCT_LEARN_PARM *sparm,
 		for(i=0;i<n;i++) 
 			for(celem=ccache->constlist[i];celem;celem=celem->next) 
 				cnum++;
-		printf("Final number of constraints in cache: %ld\n",cnum);
+		Rprintf("Final number of constraints in cache: %ld\n",cnum);
 	}
 	if(struct_verbosity>=4)
 		printW(sm->w,sizePsi,n,lparm->svm_c);
@@ -954,13 +954,13 @@ void svm_learn_struct_joint(SAMPLE sample, STRUCT_LEARN_PARM *sparm,
 		lparm->sharedslack=1;
 	}
 	else if(sparm->slack_norm == 2) {
-		printf("ERROR: The joint algorithm does not apply to L2 slack norm!"); 
-		fflush(stdout);
-		exit(0); 
+		error("ERROR: The joint algorithm does not apply to L2 slack norm!"); 
+		
+		
 	}
 	else {
-		printf("ERROR: Slack norm must be L1 or L2!"); fflush(stdout);
-		exit(0);
+		error("ERROR: Slack norm must be L1 or L2!"); 
+		
 	}
 
 
@@ -1018,9 +1018,9 @@ void svm_learn_struct_joint(SAMPLE sample, STRUCT_LEARN_PARM *sparm,
 		/* NOTE:  */
 		for(i=0;i<n;i++) 
 			if(loss(ex[i].y,ex[i].y,sparm) != 0) {
-				printf("ERROR: Loss function returns non-zero value loss(y_%d,y_%d)\n",i,i);
-				printf("       W4 algorithm assumes that loss(y_i,y_i)=0 for all i.\n");
-				exit(1);
+				Rprintf("ERROR: Loss function returns non-zero value loss(y_%d,y_%d)\n",i,i);
+				error("       W4 algorithm assumes that loss(y_i,y_i)=0 for all i.\n");
+	
 			}
 	}
 
@@ -1041,8 +1041,8 @@ void svm_learn_struct_joint(SAMPLE sample, STRUCT_LEARN_PARM *sparm,
 	do { /* iteratively find and add constraints to working set */
 
 		if(struct_verbosity>=1) { 
-			printf("Iter %i: ",++numIt); 
-			fflush(stdout);
+			Rprintf("Iter %i: ",++numIt); 
+			
 		}
 
 		rt1 = get_runtime();
@@ -1121,7 +1121,7 @@ void svm_learn_struct_joint(SAMPLE sample, STRUCT_LEARN_PARM *sparm,
 				viol_est*=((double)n/j);
 				epsilon_est=(1-(double)j/n)*epsilon_est+(double)j/n*(viol_est-slack);
 				if((struct_verbosity >= 1) && (j!=n))
-					printf("(upd=%5.1f%%,eps^=%.4f,eps*=%.4f)",
+					Rprintf("(upd=%5.1f%%,eps^=%.4f,eps*=%.4f)",
 					100.0*j/n,viol_est-slack,epsilon_est);
 			}
 			lhsXw=rhs-viol;
@@ -1177,9 +1177,9 @@ void svm_learn_struct_joint(SAMPLE sample, STRUCT_LEARN_PARM *sparm,
 
 		/**** if `error', then add constraint and recompute QP ****/
 		if(slack > (rhs-lhsXw+0.000001)) {
-			printf("\nWARNING: Slack of most violated constraint is smaller than slack of working\n");
-			printf("         set! There is probably a bug in 'find_most_violated_constraint_*'.\n");
-			printf("slack=%f, newslack=%f\n",slack,rhs-lhsXw);
+			Rprintf("\nWARNING: Slack of most violated constraint is smaller than slack of working\n");
+			Rprintf("         set! There is probably a bug in 'find_most_violated_constraint_*'.\n");
+			Rprintf("slack=%f, newslack=%f\n",slack,rhs-lhsXw);
 			/* exit(1); */
 		}
 		ceps = MAX(0,rhs-lhsXw-slack);
@@ -1208,7 +1208,7 @@ void svm_learn_struct_joint(SAMPLE sample, STRUCT_LEARN_PARM *sparm,
 
 			/**** get new QP solution ****/
 			if(struct_verbosity >= 1) {
-				printf("*");fflush(stdout);
+				Rprintf("*");
 			}
 			if(struct_verbosity >= 2) rt2 = get_runtime();
 			/* set svm precision so that higher than eps of most violated constr */
@@ -1248,15 +1248,15 @@ void svm_learn_struct_joint(SAMPLE sample, STRUCT_LEARN_PARM *sparm,
 			/* Check if some of the linear constraints have not been
 			active in a while. Those constraints are then removed to
 			avoid bloating the working set beyond necessity. */
-			if(struct_verbosity>=3) printf("Reducing working set...");fflush(stdout);
+			if(struct_verbosity>=3) Rprintf("Reducing working set...");
 			remove_inactive_constraints(&cset,alpha,optcount,alphahist,50);
-			if( struct_verbosity >= 3 ) printf("done. ");
+			if( struct_verbosity >= 3 ) Rprintf("done. ");
 		} else {
 			free_svector(lhs);
 		}
 
 		if(struct_verbosity>=1)
-			printf("(NumConst=%d, SV=%ld, CEps=%.4f, QPEps=%.4f)\n",cset.m,
+			Rprintf("(NumConst=%d, SV=%ld, CEps=%.4f, QPEps=%.4f)\n",cset.m,
 			svmModel->sv_num-1, ceps, svmModel->maxdiff);
 
 		rt_total+=MAX(get_runtime()-rt1,0);
@@ -1270,7 +1270,7 @@ void svm_learn_struct_joint(SAMPLE sample, STRUCT_LEARN_PARM *sparm,
 	else modellength = model_length_s(svmModel);
 	sm->primalobj = 0.5*modellength*modellength + sparm->C*viol;
 	if(struct_verbosity>=1) {
-		printf("Final epsilon on KKT-Conditions: %.5f\n", MAX(svmModel->maxdiff,ceps));
+		Rprintf("Final epsilon on KKT-Conditions: %.5f\n", MAX(svmModel->maxdiff,ceps));
 
 		slack = 0;
 		for(j=0; j<cset.m; j++) 
@@ -1282,27 +1282,27 @@ void svm_learn_struct_joint(SAMPLE sample, STRUCT_LEARN_PARM *sparm,
 		else modellength = model_length_s(svmModel);
 		dualitygap = (0.5*modellength*modellength+sparm->C*viol) - (alphasum-0.5*modellength*modellength);
 
-		printf("Upper bound on duality gap: %.5f\n", dualitygap);
-		printf("Dual objective value: dval=%.5f\n", alphasum-0.5*modellength*modellength);
-		printf("Primal objective value: pval=%.5f\n", 0.5*modellength*modellength+sparm->C*viol);
-		printf("Total number of constraints in final working set: %i (of %i)\n",(int)cset.m,(int)totconstraints);
-		printf("Number of iterations: %d\n",numIt);
-		printf("Number of calls to 'find_most_violated_constraint': %ld\n",argmax_count);
-		printf("Number of SV: %ld \n",svmModel->sv_num-1);
-		printf("Norm of weight vector: |w|=%.5f\n",modellength);
-		printf("Value of slack variable (on working set): xi=%.5f\n",slack);
-		printf("Value of slack variable (global): xi=%.5f\n",viol);
-		printf("Norm of longest difference vector: ||Psi(x,y)-Psi(x,ybar)||=%.5f\n",
+		Rprintf("Upper bound on duality gap: %.5f\n", dualitygap);
+		Rprintf("Dual objective value: dval=%.5f\n", alphasum-0.5*modellength*modellength);
+		Rprintf("Primal objective value: pval=%.5f\n", 0.5*modellength*modellength+sparm->C*viol);
+		Rprintf("Total number of constraints in final working set: %i (of %i)\n",(int)cset.m,(int)totconstraints);
+		Rprintf("Number of iterations: %d\n",numIt);
+		Rprintf("Number of calls to 'find_most_violated_constraint': %ld\n",argmax_count);
+		Rprintf("Number of SV: %ld \n",svmModel->sv_num-1);
+		Rprintf("Norm of weight vector: |w|=%.5f\n",modellength);
+		Rprintf("Value of slack variable (on working set): xi=%.5f\n",slack);
+		Rprintf("Value of slack variable (global): xi=%.5f\n",viol);
+		Rprintf("Norm of longest difference vector: ||Psi(x,y)-Psi(x,ybar)||=%.5f\n",
 			length_of_longest_document_vector(cset.lhs,cset.m,kparm));
 		if(struct_verbosity>=2) 
-			printf("Runtime in cpu-seconds: %.2f (%.2f%% for QP, %.2f%% for kernel, %.2f%% for Argmax, %.2f%% for Psi, %.2f%% for init, %.2f%% for cache update, %.2f%% for cache const, %.2f%% for cache add (incl. %.2f%% for sum))\n",
+			Rprintf("Runtime in cpu-seconds: %.2f (%.2f%% for QP, %.2f%% for kernel, %.2f%% for Argmax, %.2f%% for Psi, %.2f%% for init, %.2f%% for cache update, %.2f%% for cache const, %.2f%% for cache add (incl. %.2f%% for sum))\n",
 			rt_total/100.0, (100.0*rt_opt)/rt_total, (100.0*rt_kernel)/rt_total,
 			(100.0*rt_viol)/rt_total, (100.0*rt_psi)/rt_total, 
 			(100.0*rt_init)/rt_total,(100.0*rt_cacheupdate)/rt_total,
 			(100.0*rt_cacheconst)/rt_total,(100.0*rt_cacheadd)/rt_total,
 			(100.0*rt_cachesum)/rt_total);
 		else if(struct_verbosity==1) 
-			printf("Runtime in cpu-seconds: %.2f\n",rt_total/100.0);
+			Rprintf("Runtime in cpu-seconds: %.2f\n",rt_total/100.0);
 	}
 	if(ccache) {
 		long cnum=0;
@@ -1310,7 +1310,7 @@ void svm_learn_struct_joint(SAMPLE sample, STRUCT_LEARN_PARM *sparm,
 		for(i=0;i<n;i++) 
 			for(celem=ccache->constlist[i];celem;celem=celem->next) 
 				cnum++;
-		printf("Final number of constraints in cache: %ld\n",cnum);
+		Rprintf("Final number of constraints in cache: %ld\n",cnum);
 	}
 	if(struct_verbosity>=4)
 		printW(sm->w,sizePsi,n,lparm->svm_c);
@@ -1369,7 +1369,7 @@ LABEL find_most_violated_constraint(SVECTOR **fydelta, double *rhs,
 	if(struct_verbosity >= 2) (*rt_viol)+=MAX(get_runtime()-rt2,0);
 
 	if(empty_label(ybar)) {
-		printf("ERROR: empty label was returned for example\n");
+		Rprintf("ERROR: empty label was returned for example\n");
 		/* exit(1); */
 		/* continue; */
 	}

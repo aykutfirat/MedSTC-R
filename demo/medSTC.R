@@ -37,8 +37,8 @@ print(table(predInd,newsgroup.test.labels[classesInTest]))
 
 getTopWordsForTopics<-
 function(model, vocab, topk=5){
-	library(tm)
-	 z<-match(stopwords(),newsgroup.vocab,nomatch=0)
+	data(stopwords)
+	 z<-match(stopwords,newsgroup.vocab,nomatch=0)
 	 z<-z[z>0]
 	x<-apply(model$state$LogProbabilityOfWordsForTopics,2,function(x) { y<-order(x,decreasing=TRUE); y<-y[!y%in%z]; vocab[y[1:topk]]   })
 	colnames(x)<-paste("topic",1:ncol(model$state$LogProbabilityOfWordsForTopics))	

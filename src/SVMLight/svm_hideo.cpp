@@ -18,6 +18,7 @@
 
 # include <math.h>
 # include "svm_common.h"
+#include <R.h>
 
 /* 
   solve the quadratic programming problem
@@ -110,23 +111,23 @@ double *optimize_qp(QP *qp, double *epsilon_crit, long nx, double *threshold, LE
   }
 
   if(verbosity>=4) { /* really verbose */
-    printf("\n\n");
+    Rprintf("\n\n");
     eq=qp->opt_ce0[0];
     for(i=0;i<qp->opt_n;i++) {
       eq+=qp->opt_xinit[i]*qp->opt_ce[i];
-      printf("%f: ",qp->opt_g0[i]);
+      Rprintf("%f: ",qp->opt_g0[i]);
       for(j=0;j<qp->opt_n;j++) {
-	printf("%f ",qp->opt_g[i*qp->opt_n+j]);
+	Rprintf("%f ",qp->opt_g[i*qp->opt_n+j]);
       }
-      printf(": a=%.10f < %f",qp->opt_xinit[i],qp->opt_up[i]);
-      printf(": y=%f\n",qp->opt_ce[i]);
+      Rprintf(": a=%.10f < %f",qp->opt_xinit[i],qp->opt_up[i]);
+      Rprintf(": y=%f\n",qp->opt_ce[i]);
     }
     if(qp->opt_m) {
-      printf("EQ: %f*x0",qp->opt_ce[0]);
+      Rprintf("EQ: %f*x0",qp->opt_ce[0]);
       for(i=1;i<qp->opt_n;i++) {
-	printf(" + %f*x%ld",qp->opt_ce[i],i);
+	Rprintf(" + %f*x%ld",qp->opt_ce[i],i);
       }
-      printf(" = %f\n\n",-qp->opt_ce0[0]);
+      Rprintf(" = %f\n\n",-qp->opt_ce0[0]);
     }
   }
 
@@ -140,7 +141,7 @@ double *optimize_qp(QP *qp, double *epsilon_crit, long nx, double *threshold, LE
 				 qp->opt_low,qp->opt_up,primal,qp->opt_xinit,
 				 dual,nonoptimal,buffer,&progress);
   if(verbosity>=3) { 
-    printf("return(%d)...",result);
+    Rprintf("return(%d)...",result);
   }
 
   if(learn_parm->totwords < learn_parm->svm_maxqpsize) { 
@@ -171,7 +172,7 @@ double *optimize_qp(QP *qp, double *epsilon_crit, long nx, double *threshold, LE
 				   qp->opt_low,qp->opt_up,primal,qp->opt_xinit,
 				   dual,nonoptimal,buffer,&progress);
     if(verbosity>=3) { 
-      printf("return_srd(%d)...",result);
+      Rprintf("return_srd(%d)...",result);
     }
 
     if(result != PRIMAL_OPTIMAL) {
@@ -195,7 +196,7 @@ double *optimize_qp(QP *qp, double *epsilon_crit, long nx, double *threshold, LE
     precision_violations=0;
     (*epsilon_crit)*=10.0; 
     if(verbosity>=1) {
-      printf("\nWARNING: Relaxing epsilon on KT-Conditions (%f).\n",
+      Rprintf("\nWARNING: Relaxing epsilon on KT-Conditions (%f).\n",
 	     (*epsilon_crit));
     }
   }	  
@@ -206,21 +207,21 @@ double *optimize_qp(QP *qp, double *epsilon_crit, long nx, double *threshold, LE
     (*threshold)=0;
 
   if(verbosity>=4) { /* really verbose */
-    printf("\n\n");
+    Rprintf("\n\n");
     eq=qp->opt_ce0[0];
     for(i=0;i<qp->opt_n;i++) {
       eq+=primal[i]*qp->opt_ce[i];
-      printf("%f: ",qp->opt_g0[i]);
+      Rprintf("%f: ",qp->opt_g0[i]);
       for(j=0;j<qp->opt_n;j++) {
-	printf("%f ",qp->opt_g[i*qp->opt_n+j]);
+	Rprintf("%f ",qp->opt_g[i*qp->opt_n+j]);
       }
-      printf(": a=%.30f",primal[i]);
-      printf(": nonopti=%ld",nonoptimal[i]);
-      printf(": y=%f\n",qp->opt_ce[i]);
+      Rprintf(": a=%.30f",primal[i]);
+      Rprintf(": nonopti=%ld",nonoptimal[i]);
+      Rprintf(": y=%f\n",qp->opt_ce[i]);
     }
-    printf("eq-constraint=%.30f\n",eq);
-    printf("b=%f\n",(*threshold));
-    printf(" smallroundcount=%ld ",smallroundcount);
+    Rprintf("eq-constraint=%.30f\n",eq);
+    Rprintf("b=%f\n",(*threshold));
+    Rprintf(" smallroundcount=%ld ",smallroundcount);
   }
 
   return(primal);
@@ -335,10 +336,10 @@ int optimize_hildreth_despo(long n, long m, double precision, double epsilon_cri
 			}
 		}
 		if((g[b1*n+b2] == g[b1*n+b1]) && (g[b1*n+b2] == g[b2*n+b2])) {
-			/* printf("euqal\n"); */
+			/* Rprintf("euqal\n"); */
 			if(ce[b1] == ce[b2]) { 
 				if(g0_b1 <= g0_b2) { /* set b1 to upper bound */
-					/* printf("case +=<\n"); */
+					/* Rprintf("case +=<\n"); */
 					changed=1;
 					t=up[b1]-init[b1];
 					if((init[b2]-low[b2]) < t) {
@@ -348,7 +349,7 @@ int optimize_hildreth_despo(long n, long m, double precision, double epsilon_cri
 					start[b2]=init[b2]-t;
 				}
 				else if(g0_b1 > g0_b2) { /* set b2 to upper bound */
-					/* printf("case +=>\n"); */
+					/* Rprintf("case +=>\n"); */
 					changed=1;
 					t=up[b2]-init[b2];
 					if((init[b1]-low[b1]) < t) {
@@ -359,7 +360,7 @@ int optimize_hildreth_despo(long n, long m, double precision, double epsilon_cri
 				}
 			}
 			else if(((g[b1*n+b1]>0) || (g[b2*n+b2]>0))) { /* (ce[b1] != ce[b2]) */ 
-				/* printf("case +!\n"); */
+				/* Rprintf("case +!\n"); */
 				t=((ce[b2]/ce[b1])*g0[b1]-g0[b2]+ce0[0]*(g[b1*n+b1]*ce[b2]/ce[b1]-g[b1*n+b2]/ce[b1]))/((ce[b2]*ce[b2]/(ce[b1]*ce[b1]))*g[b1*n+b1]+g[b2*n+b2]-2*(g[b1*n+b2]*ce[b2]/ce[b1]))-init[b2];
 				changed=1;
 				if((up[b2]-init[b2]) < t) {
@@ -379,10 +380,10 @@ int optimize_hildreth_despo(long n, long m, double precision, double epsilon_cri
 			}
 		}
 		if((-g[b1*n+b2] == g[b1*n+b1]) && (-g[b1*n+b2] == g[b2*n+b2])) {
-			/* printf("diffeuqal\n"); */
+			/* Rprintf("diffeuqal\n"); */
 			if(ce[b1] != ce[b2]) {
 				if((g0_b1+g0_b2) < 0) { /* set b1 and b2 to upper bound */
-					/* printf("case -!<\n"); */
+					/* Rprintf("case -!<\n"); */
 					changed=1;
 					t=up[b1]-init[b1];
 					if((up[b2]-init[b2]) < t) {
@@ -392,7 +393,7 @@ int optimize_hildreth_despo(long n, long m, double precision, double epsilon_cri
 					start[b2]=init[b2]+t;
 				}     
 				else if((g0_b1+g0_b2) >= 0) { /* set b1 and b2 to lower bound */
-					/* printf("case -!>\n"); */
+					/* Rprintf("case -!>\n"); */
 					changed=1;
 					t=init[b1]-low[b1];
 					if((init[b2]-low[b2]) < t) {
@@ -403,7 +404,7 @@ int optimize_hildreth_despo(long n, long m, double precision, double epsilon_cri
 				}
 			}
 			else if(((g[b1*n+b1]>0) || (g[b2*n+b2]>0))) { /* (ce[b1]==ce[b2]) */
-				/*  printf("case -=\n"); */
+				/*  Rprintf("case -=\n"); */
 				t=((ce[b2]/ce[b1])*g0[b1]-g0[b2]+ce0[0]*(g[b1*n+b1]*ce[b2]/ce[b1]-g[b1*n+b2]/ce[b1]))/((ce[b2]*ce[b2]/(ce[b1]*ce[b1]))*g[b1*n+b1]+g[b2*n+b2]-2*(g[b1*n+b2]*ce[b2]/ce[b1]))-init[b2];
 				changed=1;
 				if((up[b2]-init[b2]) < t) {
@@ -429,7 +430,7 @@ int optimize_hildreth_despo(long n, long m, double precision, double epsilon_cri
 	if((m>0) 
 		&& ((fabs(g[b1*n+b1]) < lindep_sensitivity) 
 		|| (fabs(g[b2*n+b2]) < lindep_sensitivity))) {
-			/* printf("Case 0\n"); */
+			/* Rprintf("Case 0\n"); */
 			add+=0.093274;
 	}    
 	/* in case both examples are linear dependent */
@@ -437,14 +438,14 @@ int optimize_hildreth_despo(long n, long m, double precision, double epsilon_cri
 		&& (g[b1*n+b2] != 0 && g[b2*n+b2] != 0)
 		&& (fabs(g[b1*n+b1]/g[b1*n+b2] - g[b1*n+b2]/g[b2*n+b2])
 		< lindep_sensitivity)) { 
-			/* printf("Case lindep\n"); */
+			/* Rprintf("Case lindep\n"); */
 			add+=0.078274;
 	}
 
 	/* special case for zero diagonal entry on unbiased hyperplane */
 	if((m==0) && (b1>=0))  {
 		if(fabs(g[b1*n+b1]) < lindep_sensitivity) { 
-			/* printf("Case 0b1\n"); */
+			/* Rprintf("Case 0b1\n"); */
 			for(i=0;i<n;i++) {  /* fix other vectors */
 				if(i==b1) 
 					g0_b1=g0[i];
@@ -465,7 +466,7 @@ int optimize_hildreth_despo(long n, long m, double precision, double epsilon_cri
 	}
 	if((m==0) && (b2>=0))  {
 		if(fabs(g[b2*n+b2]) < lindep_sensitivity) { 
-			/* printf("Case 0b2\n"); */
+			/* Rprintf("Case 0b2\n"); */
 			for(i=0;i<n;i++) {  /* fix other vectors */
 				if(i==b2) 
 					g0_b2=g0[i];
@@ -485,7 +486,7 @@ int optimize_hildreth_despo(long n, long m, double precision, double epsilon_cri
 		}
 	}
 
-	/* printf("b1=%ld,b2=%ld\n",b1,b2); */
+	/* Rprintf("b1=%ld,b2=%ld\n",b1,b2); */
 
 	lcopy_matrix(g,n,d);
 	if((m==1) && (add>0.0)) {
@@ -591,7 +592,7 @@ int optimize_hildreth_despo(long n, long m, double precision, double epsilon_cri
 		}
 
 		if(verbosity>=3) {
-			printf("real_qp_size(%ld)...",n_indep);
+			Rprintf("real_qp_size(%ld)...",n_indep);
 		}
 
 		/* cannot optimize with only one variable */
@@ -627,7 +628,7 @@ int optimize_hildreth_despo(long n, long m, double precision, double epsilon_cri
 		obj_after=calculate_qp_objective(n,g,g0,primal);
 		(*progress)=obj_before-obj_after;
 		if(verbosity>=3) {
-			printf("before(%.30f)...after(%.30f)...result_sd(%d)...",
+			Rprintf("before(%.30f)...after(%.30f)...result_sd(%d)...",
 				obj_before,obj_after,result); 
 		}
 
@@ -668,14 +669,14 @@ int solve_dual( long n, long m, double precision, double epsilon_crit, long maxi
 		perror("SOLVE DUAL: inappropriate number of eq-constrains!");
 
 	/*  
-	printf("\n");
+	Rprintf("\n");
 	for(i=0;i<n;i++) {
-	printf("%f: ",g0[i]);
+	Rprintf("%f: ",g0[i]);
 	for(j=0;j<n;j++) {
-	printf("%f ",g[i*n+j]);
+	Rprintf("%f ",g[i*n+j]);
 	}
-	printf(": a=%.30f",primal[i]);
-	printf(": y=%f\n",ce[i]);
+	Rprintf(": a=%.30f",primal[i]);
+	Rprintf(": y=%f\n",ce[i]);
 	}
 	*/
 
@@ -763,7 +764,7 @@ int solve_dual( long n, long m, double precision, double epsilon_crit, long maxi
 				dual_old[i]=dual[i];
 			}
 			/*
-			printf("%d) maxviol=%20f precision=%f\n",iter,maxviol,precision); 
+			Rprintf("%d) maxviol=%20f precision=%f\n",iter,maxviol,precision); 
 			*/
 		}
 
@@ -813,7 +814,7 @@ int solve_dual( long n, long m, double precision, double epsilon_crit, long maxi
 				epsilon_hideo=(primal[i]-low[i])*2.0;
 			}
 		}
-		/* printf("\nEPSILON_HIDEO=%.30f\n",epsilon_hideo); */
+		/* Rprintf("\nEPSILON_HIDEO=%.30f\n",epsilon_hideo); */
 
 		for(i=0;i<n;i++) {           /* clip alphas to bounds */
 			if(primal[i]<=(low[i]+epsilon_hideo)) {
@@ -847,7 +848,7 @@ int solve_dual( long n, long m, double precision, double epsilon_crit, long maxi
 			if((primal[i]<=(low[i]+epsilon_a)) || (primal[i]>=(up[i]-epsilon_a))) {
 				at_bound++;
 			}
-			/*    printf("HIDEOtemp: a[%ld]=%.30f, dist=%.6f, b=%f, at_bound=%ld\n",i,primal[i],dist,model_b,at_bound);  */
+			/*    Rprintf("HIDEOtemp: a[%ld]=%.30f, dist=%.6f, b=%f, at_bound=%ld\n",i,primal[i],dist,model_b,at_bound);  */
 		}
 		if(m>0) {
 			eq=-ce0[0];               /* check precision of eq-constraint */
@@ -862,7 +863,7 @@ int solve_dual( long n, long m, double precision, double epsilon_crit, long maxi
 					retrain=1;
 					primal_optimal=0;
 			}
-			/* printf("\n eq=%.30f ce0=%f at-bound=%ld\n",eq,ce0[0],at_bound);  */
+			/* Rprintf("\n eq=%.30f ce0=%f at-bound=%ld\n",eq,ce0[0],at_bound);  */
 		}
 
 		if(retrain) {
@@ -978,11 +979,11 @@ void lprint_matrix(double *matrix, long depth)
   long i,j;
   for(i=0;i<depth;i++) {
     for(j=0;j<depth;j++) {
-      printf("%5.2f ",(double)(matrix[i*depth+j]));
+      Rprintf("%5.2f ",(double)(matrix[i*depth+j]));
     }
-    printf("\n");
+    Rprintf("\n");
   }
-  printf("\n");
+  Rprintf("\n");
 }
 
 void ladd_matrix(double *matrix, long depth, double scalar)

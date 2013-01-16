@@ -3,10 +3,11 @@
 \alias{medSTC-package}
 \docType{package}
 \title{
-  Max-margin supervised Sparse Topical Coding model (Med-STC) for multi-class classification
+  Max-margin supervised Sparse Topical Coding model (Med-STC) 
 }
 \description{
-  This package employs sparse topical coding models for multi-class classification.
+  This package employs sparse topical coding models for multi-class classification 
+  developed by Jun Zhu and Eric P. Xing.
 }
 \details{
 \tabular{ll}{

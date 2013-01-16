@@ -7,6 +7,7 @@
 \alias{newsgroup.test.labels}
 \alias{newsgroup.vocab}
 \alias{newsgroup.label.map}
+\alias{stopwords}
 \docType{data}
 \title{
   A collection of newsgroup messages with classes.
@@ -39,6 +40,8 @@ data(newsgroup.label.map)
   
   \code{newsgroup.label.map} maps the numeric class labels to actual class names.
   
+  \code{stopwords} English stopwords extracted from the tm package.
+  
 }
 \source{
   \cite{http://qwone.com/~jason/20Newsgroups/}
@@ -51,5 +54,6 @@ data(newsgroup.train.labels)
 data(newsgroup.test.labels)
 data(newsgroup.vocab)
 data(newsgroup.label.map)
+data(stopwords)
 }
 \keyword{datasets}

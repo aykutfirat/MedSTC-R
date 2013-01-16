@@ -23,6 +23,7 @@
 #include "../SVMLight/svm_common.h"
 #include "params.h"
 #include "LBFGSCPP.h"
+#include <R.h>
 //using namespace std;
 
 MedSTC::MedSTC(void)
@@ -421,7 +422,7 @@ bool MedSTC::dict_learn(Corpus *pC, double **theta, double***s, Params *param, b
 		try	{
 			m_pLBFGS->lbfgs( opt_size, m, x_, f, g_, diagco, diag_, iprint, eps, xtol, iflag );
 		} catch(ExceptionWithIflag* e) {
-			printf("exception in l-bfgs\n");
+			Rprintf("exception in l-bfgs\n");
 			break;
 		}
 		set_param(x_, m_nK, m_nNumTerms);
@@ -637,75 +638,8 @@ void MedSTC::set_init_param(STRUCT_LEARN_PARM *struct_parm, LEARN_PARM *learn_pa
 
 	if((learn_parm->skip_final_opt_check) 
 		&& (kernel_parm->kernel_type == LINEAR)) {
-			printf("\nIt does not make sense to skip the final optimality check for linear kernels.\n\n");
 			learn_parm->skip_final_opt_check=0;
 	}    
-	if((learn_parm->skip_final_opt_check) 
-		&& (learn_parm->remove_inconsistent)) {
-			printf("\nIt is necessary to do the final optimality check when removing inconsistent \nexamples.\n");
-			exit(0);
-	}    
-	if((learn_parm->svm_maxqpsize<2)) {
-		printf("\nMaximum size of QP-subproblems not in valid range: %ld [2..]\n",learn_parm->svm_maxqpsize); 
-		exit(0);
-	}
-	if((learn_parm->svm_maxqpsize<learn_parm->svm_newvarsinqp)) {
-		printf("\nMaximum size of QP-subproblems [%ld] must be larger than the number of\n",learn_parm->svm_maxqpsize); 
-		printf("new variables [%ld] entering the working set in each iteration.\n",learn_parm->svm_newvarsinqp); 
-		exit(0);
-	}
-	if(learn_parm->svm_iter_to_shrink<1) {
-		printf("\nMaximum number of iterations for shrinking not in valid range: %ld [1,..]\n",learn_parm->svm_iter_to_shrink);
-		exit(0);
-	}
-	if(((*alg_type) < 0) || (((*alg_type) > 5) && ((*alg_type) != 9))) {
-		printf("\nAlgorithm type must be either '0', '1', '2', '3', '4', or '9'!\n\n");
-		exit(0);
-	}
-	if(learn_parm->transduction_posratio>1) {
-		printf("\nThe fraction of unlabeled examples to classify as positives must\n");
-		printf("be less than 1.0 !!!\n\n");
-		exit(0);
-	}
-	if(learn_parm->svm_costratio<=0) {
-		printf("\nThe COSTRATIO parameter must be greater than zero!\n\n");
-		exit(0);
-	}
-	if(struct_parm->epsilon<=0) {
-		printf("\nThe epsilon parameter must be greater than zero!\n\n");
-		exit(0);
-	}
-	if((struct_parm->ccache_size<=0) && ((*alg_type) == 4)) {
-		printf("\nThe cache size must be at least 1!\n\n");
-		exit(0);
-	}
-	if(((struct_parm->batch_size<=0) || (struct_parm->batch_size>100))  
-		&& ((*alg_type) == 4)) {
-			printf("\nThe batch size must be in the interval ]0,100]!\n\n");
-			exit(0);
-	}
-	if((struct_parm->slack_norm<1) || (struct_parm->slack_norm>2)) {
-		printf("\nThe norm of the slacks must be either 1 (L1-norm) or 2 (L2-norm)!\n\n");
-		exit(0);
-	}
-	if((struct_parm->loss_type != SLACK_RESCALING) 
-		&& (struct_parm->loss_type != MARGIN_RESCALING)) {
-			printf("\nThe loss type must be either 1 (slack rescaling) or 2 (margin rescaling)!\n\n");
-			exit(0);
-	}
-	if(learn_parm->rho<0) {
-		printf("\nThe parameter rho for xi/alpha-estimates and leave-one-out pruning must\n");
-		printf("be greater than zero (typically 1.0 or 2.0, see T. Joachims, Estimating the\n");
-		printf("Generalization Performance of an SVM Efficiently, ICML, 2000.)!\n\n");
-		exit(0);
-	}
-	if((learn_parm->xa_depth<0) || (learn_parm->xa_depth>100)) {
-		printf("\nThe parameter depth for ext. xi/alpha-estimates must be in [0..100] (zero\n");
-		printf("for switching to the conventional xa/estimates described in T. Joachims,\n");
-		printf("Estimating the Generalization Performance of an SVM Efficiently, ICML, 2000.)\n");
-		exit(0);
-	}
-
 	parse_struct_parameters(struct_parm);
 }
 
@@ -750,7 +684,7 @@ void MedSTC::svmStructSolver(char *dataFileName, Params *param, double *res)
 		}
 		svm_learn_struct_joint( sample, &struct_parm, &learn_parm, 
 			&kernel_parm, &structmodel, ONESLACK_PRIMAL_ALG, initEta_, nEtaNum );
-	} else exit(1);
+	} 
 
 	/* get the optimal lagrangian multipliers. 
 	*    Note: for 1-slack formulation: the "marginalization" is 

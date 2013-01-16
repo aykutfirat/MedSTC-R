@@ -22,6 +22,7 @@
 #include <string.h>
 #include "svm_struct_common.h"
 #include "svm_struct_api.h"
+#include <R.h>
 
 void        svm_struct_learn_api_init(int argc, char* argv[])
 {
@@ -66,8 +67,8 @@ SAMPLE      read_struct_examples(char *file, STRUCT_LEARN_PARM *sparm)
 			num_classes = target[i]+0.1;
 	for( i=0; i<n; i++ )     /* make sure all class labels are positive */
 		if(target[i]<1) {
-			printf("\nERROR: The class label '%f' of example number %ld is not greater than '1'!\n",target[i],i+1);
-			exit(1);
+			error("\nERROR: The class label '%f' of example number %ld is not greater than '1'!\n",target[i],i+1);
+			
 		} 
 
 	for( i=0; i<n; i++ ) {          /* copy docs over into new datastructure */
@@ -82,7 +83,7 @@ SAMPLE      read_struct_examples(char *file, STRUCT_LEARN_PARM *sparm)
 	sample.examples = examples;
 
 	if(struct_verbosity>0)
-		printf(" (%d examples) ",sample.n);
+		Rprintf(" (%d examples) ",sample.n);
 	return(sample);
 }
 
@@ -108,11 +109,11 @@ void        init_struct_model(SAMPLE sample, STRUCTMODEL *sm,
 	totwords=w->wnum;
   sparm->num_features=totwords;
   if(struct_verbosity>0)
-    printf("Training set properties: %d features, %d classes\n",
+    Rprintf("Training set properties: %d features, %d classes\n",
 	   sparm->num_features,sparm->num_classes);
   sm->sizePsi=sparm->num_features*sparm->num_classes;
   if(struct_verbosity>=2)
-    printf("Size of Phi: %ld\n",sm->sizePsi);
+    Rprintf("Size of Phi: %ld\n",sm->sizePsi);
 }
 
 CONSTSET    init_struct_constraints(SAMPLE sample, STRUCTMODEL *sm, 
@@ -238,10 +239,10 @@ LABEL       find_most_violated_constraint_slackrescaling(PATTERNX x, LABEL y,
     }
   }
   if(bestclass == -1) 
-    printf("ERROR: Only one class\n");
+    Rprintf("ERROR: Only one class\n");
   ybar.classlabel = bestclass;
   if(struct_verbosity>=3)
-    printf("[%ld:%.2f] ",bestclass,bestscore);
+    Rprintf("[%ld:%.2f] ",bestclass,bestscore);
   return(ybar);
 }
 
@@ -283,9 +284,9 @@ LABEL       find_most_violated_constraint_marginrescaling(PATTERNX x, LABEL y,
 			first = 0;
 		}
 	}
-	if(bestclass == -1) printf("ERROR: Only one class\n");
+	if(bestclass == -1) Rprintf("ERROR: Only one class\n");
 	ybar.classlabel = bestclass;
-	if(struct_verbosity>=3)	printf("[%ld:%.2f] ",bestclass,bestscore);
+	if(struct_verbosity>=3)	Rprintf("[%ld:%.2f] ",bestclass,bestscore);
 	return(ybar);
 }
 
@@ -340,8 +341,8 @@ double      loss(LABEL y, LABEL ybar, STRUCT_LEARN_PARM *sparm)
 		/* Put your code for different loss functions here. But then
 		find_most_violated_constraint_???(x, y, sm) has to return the
 		highest scoring label with the largest loss. */
-		printf("Unkown loss function\n");
-		exit(1);
+		error("Unkown loss function\n");
+		
 	}
 }
 
@@ -366,13 +367,13 @@ void        print_struct_learning_stats(SAMPLE sample, STRUCTMODEL *sm,
   MODEL *model=sm->svm_model;
   if(model->kernel_parm.kernel_type == LINEAR) {
     if(struct_verbosity>=1) {
-      printf("Compacting linear model..."); fflush(stdout);
+      Rprintf("Compacting linear model..."); 
     }
     sm->svm_model=compact_linear_model(model);
     sm->w=sm->svm_model->lin_weights; /* short cut to weight vector */
     free_model(model,1);
     if(struct_verbosity>=1) {
-      printf("done\n"); fflush(stdout);
+      Rprintf("done\n"); 
     }
   }  
 }
@@ -387,7 +388,7 @@ void        write_struct_model(char *file, STRUCTMODEL *sm,
   SVECTOR *v;
 
   if ((modelfl = fopen (file, "w")) == NULL)
-  { perror (file); exit (1); }
+  { error ("file could not be opened");  }
   fprintf(modelfl,"SVM-multiclass Version %s\n",INST_VERSION);
   fprintf(modelfl,"%d # number of classes\n", sparm->num_classes);
   fprintf(modelfl,"%d # number of base features\n", sparm->num_features);
@@ -474,12 +475,12 @@ STRUCTMODEL read_struct_model(char *file, STRUCT_LEARN_PARM *sparm)
   model = (MODEL *)my_malloc(sizeof(MODEL));
 
   if ((modelfl = fopen (file, "r")) == NULL)
-  { perror (file); exit (1); }
+  { error ("file could not be opened"); }
 
   fscanf(modelfl,"SVM-multiclass Version %s\n",version_buffer);
   if(strcmp(version_buffer,INST_VERSION)) {
-    perror ("Version of model-file does not match version of svm_struct_classify!"); 
-    exit (1); 
+    error ("Version of model-file does not match version of svm_struct_classify!"); 
+    
   }
   fscanf(modelfl,"%d%*[^\n]\n", &sparm->num_classes);  
   fscanf(modelfl,"%d%*[^\n]\n", &sparm->num_features);  
@@ -505,9 +506,9 @@ STRUCTMODEL read_struct_model(char *file, STRUCT_LEARN_PARM *sparm)
     fgets(line,(int)ll,modelfl);
     if(!parse_document(line,words,&(model->alpha[i]),&queryid,&slackid,
 		       &costfactor,&wpos,max_words,&comment, true)) {
-      printf("\nParsing error while reading model file in SV %ld!\n%s",
+      error("\nParsing error while reading model file in SV %ld!\n%s",
 	     i,line);
-      exit(1);
+     
     }
     model->supvec[i] = create_example(-1,0,0,0.0,
 				      create_svector(words,comment,1.0));
@@ -517,7 +518,7 @@ STRUCTMODEL read_struct_model(char *file, STRUCT_LEARN_PARM *sparm)
   free(line);
   free(words);
   if(verbosity>=1) {
-    fprintf(stdout, " (%d support vectors read) ",(int)(model->sv_num-1));
+    Rprintf(" (%d support vectors read) ",(int)(model->sv_num-1));
   }
   sm.svm_model=model;
   sm.sizePsi=model->totwords;
@@ -570,10 +571,10 @@ void        print_struct_help()
   /* Prints a help text that is appended to the common help text of
      svm_struct_learn. */
 
-  printf("          none\n\n");
-  printf("Based on multi-class SVM formulation described in:\n");
-  printf("          K. Crammer and Y. Singer. On the Algorithmic Implementation of\n");
-  printf("          Multi-class SVMs, JMLR, 2001.\n");
+  Rprintf("          none\n\n");
+  Rprintf("Based on multi-class SVM formulation described in:\n");
+  Rprintf("          K. Crammer and Y. Singer. On the Algorithmic Implementation of\n");
+  Rprintf("          Multi-class SVMs, JMLR, 2001.\n");
 }
 
 void         parse_struct_parameters(STRUCT_LEARN_PARM *sparm)
@@ -607,8 +608,8 @@ void        parse_struct_parameters_classify(STRUCT_LEARN_PARM *sparm)
     switch ((sparm->custom_argv[i])[2]) 
       { 
       /* case 'x': i++; strcpy(xvalue,sparm->custom_argv[i]); break; */
-      default: printf("\nUnrecognized option %s!\n\n",sparm->custom_argv[i]);
-	       exit(0);
+      default: error("\nUnrecognized option %s!\n\n",sparm->custom_argv[i]);
+	       
       }
   }
 }

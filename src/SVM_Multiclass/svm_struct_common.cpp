@@ -20,6 +20,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <R.h>
 
 #include "svm_struct_common.h"
 
@@ -29,14 +30,14 @@ void printIntArray(int* x, int n)
 {
   int i;
   for(i=0;i<n;i++)
-    printf("%i:",x[i]);
+    Rprintf("%i:",x[i]);
 }
 
 void printDoubleArray(double* x, int n)
 {
   int i;
   for(i=0;i<n;i++)
-    printf("%f:",x[i]);
+    Rprintf("%f:",x[i]);
 }
 
 void printWordArray(TOKEN* x)
@@ -44,23 +45,23 @@ void printWordArray(TOKEN* x)
   int i=0;
   for(;x[i].wnum!=0;i++)
     if(x[i].weight != 0)
-      printf(" %i:%.2f ",(int)x[i].wnum,x[i].weight);
+      Rprintf(" %i:%.2f ",(int)x[i].wnum,x[i].weight);
 }
 
 void printW(double *w, long sizePhi, long n,double C)
 {
   int i;
-  printf("---- w ----\n");
+  Rprintf("---- w ----\n");
   for(i=0;i<sizePhi;i++)
     {
-      printf("%f  ",w[i]);
+      Rprintf("%f  ",w[i]);
     }
-  printf("\n----- xi ----\n");
+  Rprintf("\n----- xi ----\n");
   for(;i<sizePhi+2*n;i++)
     {
-      printf("%f ",1/sqrt(2*C)*w[i]);
+      Rprintf("%f ",1/sqrt(2*C)*w[i]);
     }
-  printf("\n");
+  Rprintf("\n");
 
 }
 /**** end print methods ****/
