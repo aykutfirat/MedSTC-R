@@ -7,7 +7,8 @@
 }
 \description{
   This package employs sparse topical coding models for multi-class classification 
-  developed by Jun Zhu and Eric P. Xing.
+  developed by Jun Zhu and Eric P. Xing. The package uses a fast C implementation of SVM, 
+  SVMlight (http://svmlight.joachims.org/), developed by Thorsten Joachims <thorsten@joachims.org>.  
 }
 \details{
 \tabular{ll}{
@@ -25,9 +26,14 @@ LazyLoad: \tab yes\cr
 }
 \references{
   \cite{Jun Zhu, and Eric P. Xing. 
-  		Sparse Topical Coding, 
-  		In Proc. of 27th Conference on Uncertainty in 
-  		Artificial Intelligence (UAI), Barcelona, Spain, 2011.}
+  Sparse Topical Coding, 
+  In Proc. of 27th Conference on Uncertainty in 
+  Artificial Intelligence (UAI), Barcelona, Spain, 2011.}
+  \cite{ T. Joachims, Making large-Scale SVM Learning
+       Practical. Advances in Kernel Methods - Support Vector
+       Learning, B. Scholkopf and C. Burges and A. Smola (ed.),
+       MIT-Press, 1999. 
+       http://www-ai.cs.uni-dortmund.de/DOKUMENTE/joachims_99a.pdf} 
 }
 \keyword{ package }
 \seealso{

@@ -1,6 +1,5 @@
-\name{predict}
+\name{predict.medSTC}
 \alias{predict.medSTC}
-\alias{predict}
 \Rdversion{1.0}
 
 \title{
@@ -11,14 +10,14 @@ MedSTC is a novel classification algorithm by Prof. Jun Zhu (http://www.ml-thu.n
 This function predicts test class labels using a medSTC model.
 }
 \usage{
-## S3 method for class 'medSTC'
-predict(model,documents,...) 
+
+\method{predict}{medSTC}(object,documents,\dots) 
 
 }
 
 \arguments{ 
 
-  \item{model}{
+  \item{object}{
    		A model object of the medSTC class, which is obtained after running \code{medSTC}.
    }
   \item{documents}{
